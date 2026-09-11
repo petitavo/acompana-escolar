@@ -1,0 +1,21 @@
+# systemd unit for a self-hosted REAL deployment (optional).
+# Install: copy to /etc/systemd/system/, adjust paths, then
+#   systemctl daemon-reload && systemctl enable --now acompana-escolar
+# It only starts the already-built compose project; it publishes nothing new.
+[Unit]
+Description=Acompana Escolar (REAL product)
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/acompana-escolar
+Environment=CADDYFILE=Caddyfile.REAL
+ExecStart=/usr/bin/docker compose --env-file /opt/acompana-escolar/.runtime/operation.env.REAL -f infra/compose.REAL.yaml up -d --wait --wait-timeout 180
+ExecStop=/usr/bin/docker compose --env-file /opt/acompana-escolar/.runtime/operation.env.REAL -f infra/compose.REAL.yaml down
+# Recovery from crash/reboot: compose restart policy brings services back;
+# this unit re-asserts desired state after the Docker daemon is up.
+
+[Install]
+WantedBy=multi-user.target

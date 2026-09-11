@@ -1,0 +1,4 @@
+https://{$LAB_HOST}:8443 {
+  tls internal
+  reverse_proxy web:8080
+}

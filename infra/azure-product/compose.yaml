@@ -1,0 +1,104 @@
+name: acompana-product
+
+x-backend: &backend
+  APP_MODE: REAL
+  DATABASE_URL: postgresql+psycopg://acompana:${POSTGRES_PASSWORD:?}@db:5432/acompana
+  COOKIE_SECURE: 'true'
+  PILOT_ENABLED: 'false'
+  ALLOW_EXTERNAL_NOTIFICATIONS: 'false'
+  ARTIFACT_DIR: /workspace/.runtime/artifacts
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '3'
+
+services:
+  db:
+    image: postgres:16.10-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: acompana
+      POSTGRES_USER: acompana
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    volumes: [database:/var/lib/postgresql/data]
+    networks: [private]
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U acompana -d acompana']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    logging: *logging
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/Dockerfile.backend
+    restart: unless-stopped
+    environment: *backend
+    volumes: [runtime:/workspace/.runtime]
+    networks: [private]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/Dockerfile.backend
+    restart: unless-stopped
+    command: [python, -m, worker.main]
+    environment: *backend
+    volumes: [runtime:/workspace/.runtime]
+    networks: [private]
+    depends_on:
+      api: {condition: service_healthy}
+    logging: *logging
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/Dockerfile.web
+    restart: unless-stopped
+    networks: [private]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:8080/]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  proxy:
+    image: caddy:2.10.2-alpine
+    restart: unless-stopped
+    environment:
+      SCHOOL_HOST: ${SCHOOL_HOST:?}
+    ports: ['80:80', '443:443']
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../.runtime/downloads:/srv/downloads:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [private, public]
+    depends_on:
+      web: {condition: service_healthy}
+    logging: *logging
+
+networks:
+  private:
+    internal: true
+  public: {}
+
+volumes:
+  database:
+  runtime:
+  caddy_data:
+  caddy_config:

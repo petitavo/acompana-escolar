@@ -1,0 +1,77 @@
+ Cuestionario sobre la salud del paciente‐9 (PHQ‐9)
+   Durante las últimas 2 semanas, ¿qué tan                                                         Más de la
+                                                                                                                   Casi todos
+   seguido ha tenido molestias debido a los                     Ningún día       Varios días       mitad de
+                                                                                                                    los días
+                                                                                                   los días
+   siguientes problemas?
+
+   1. Poco interés o placer en hacer cosas                           0                1                2               3
+
+   2. Se ha sentido decaído(a), deprimido(a) o sin
+                                                                     0                1                2               3
+      esperanzas
+
+   3. Ha tenido dificultad para quedarse o
+      permanecer dormido(a), o ha dormido                            0                1                2               3
+      demasiado
+
+   4. Se ha sentido cansado(a) o con poca energía                    0                1                2               3
+
+   5. Sin apetito o ha comido en exceso                              0                1                2               3
+   6. Se ha sentido mal con usted mismo(a) – o que
+      es un fracaso o que ha quedado mal con                         0                1                2               3
+      usted mismo(a) o con su familia
+
+   7. Ha tenido dificultad para concentrarse en
+      ciertas actividades, tales como leer el                        0                1                2               3
+      periódico o ver la televisión
+
+   8. ¿Se ha movido o hablado tan lento que otras
+      personas podrían haberlo notado? o lo
+      contrario – muy inquieto(a) o agitado(a) que                   0                1                2               3
+      ha estado moviéndose mucho más de lo
+      normal
+
+   9. Pensamientos de que estaría mejor muerto(a)
+                                                                     0                1                2               3
+      o de lastimarse de alguna manera
+
+
+
+                                For office coding:          ____0            +                 +               +
+
+                                                                                          = Total Score ____________
+
+Si marcó cualquiera de los problemas, ¿qué tanta dificultad le han dado estos problemas para hacer su
+trabajo, encargarse de las tareas del hogar, o llevarse bien con otras personas?
+           No ha sido                      Un poco                        Muy                        Extremadamente
+             difícil                        difícil                       difícil                         difícil
+                                                                                                            
+ Adapted from the patient health questionnaire (PHQ) screeners (www.phqscreeners.com). Accessed October 6, 2016. See website for
+ additional information and translations.
+PHQ‐9 Scores and Proposed Treatment Actions*
+ Score           Severity                     Proposed Treatment Actions
+ 0‐4             None‐minimal                 None
+
+ 5‐9             Mild                         Watchful waiting; repeat PHQ‐9 at follow‐up
+
+                                              Treatment plan, considering counseling, follow‐up and/or
+ 10‐14           Moderate
+                                              pharmacotherapy
+
+ 15‐19           Moderately Severe            Active treatment with pharmacotherapy and/or psychotherapy
+
+                                              Immediate initiation of pharmacotherapy and, if severe
+                                              impairment or poor response to therapy, expedited referral to
+ 20‐27           Severe
+                                              a mental health specialist for psychotherapy and/or
+                                              collaborative management
+* From Kroenke K, Spitzer RL, Psychiatric Annals 2002;32:509‐521
+
+
+
+
+ Adapted from the patient health questionnaire (PHQ) screeners (www.phqscreeners.com). Accessed October 6, 2016. See website for
+ additional information and translations.
+

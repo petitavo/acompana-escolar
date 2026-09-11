@@ -1,0 +1,22 @@
+# Public-hosting overlay for infra/compose.REAL.yaml. Apply ON TOP:
+#
+#   CADDYFILE=Caddyfile.PUBLIC \
+#   docker compose --env-file ../.runtime/operation.env.REAL \
+#     -f infra/compose.REAL.yaml -f infra/compose.PUBLIC.yaml up -d --wait
+#
+# It only changes the proxy: gives it egress (for ACME) and binds 80/443.
+# Everything else (db/api/worker/web) stays on the internal network with no
+# published ports. Requires SCHOOL_HOST = a real domain pointing here and
+# SCHOOL_ACME_EMAIL set, so Caddy can obtain a public certificate.
+# This file does not provision a host or DNS; it is a deployment recipe.
+services:
+  worker:
+    networks: [private, public]
+  proxy:
+    networks: [private, public]
+    ports:
+      - "${PUBLIC_BIND:-0.0.0.0}:80:80"
+      - "${PUBLIC_BIND:-0.0.0.0}:443:443"
+
+networks:
+  public: {}

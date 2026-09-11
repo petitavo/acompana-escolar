@@ -1,0 +1,131 @@
+# REAL school product. Private by default: nothing is published by this file.
+#
+# Secrets come from a private env file you create from infra/operation.env.example
+# (chmod 600, git-ignored), e.g.:
+#   docker compose --env-file ../.runtime/operation.env.REAL -f infra/compose.REAL.yaml up -d --wait
+# There are NO insecure defaults: unset required variables fail the run (`:?`).
+# The `proxy` port binds to 127.0.0.1 unless BIND_ADDRESS is set on purpose.
+name: acompana-school-product
+
+x-logging: &logging
+  driver: json-file
+  options: {max-size: "10m", max-file: "5"}
+
+x-hardening: &hardening
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: ["ALL"]
+  restart: unless-stopped
+  logging: *logging
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:16.10-alpine
+    cap_add: ["CHOWN", "SETUID", "SETGID", "FOWNER", "DAC_OVERRIDE"]
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB en el env privado}
+      POSTGRES_USER: ${POSTGRES_USER:?Defina POSTGRES_USER en el env privado}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en el env privado}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes: ["database:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [private]
+
+  api:
+    <<: *hardening
+    build: {context: .., dockerfile: infra/Dockerfile.backend}
+    read_only: true
+    tmpfs: ["/tmp"]
+    environment: &backend
+      APP_MODE: REAL
+      PYTHONDONTWRITEBYTECODE: "1"
+      PILOT_ENABLED: ${PILOT_ENABLED:-false}
+      ALLOW_EXTERNAL_NOTIFICATIONS: ${ALLOW_EXTERNAL_NOTIFICATIONS:-false}
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      COOKIE_SECURE: "true"
+      ARTIFACT_DIR: /workspace/.runtime/artifacts
+      FCM_SERVICE_ACCOUNT: ${FCM_SERVICE_ACCOUNT:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURITY: ${SMTP_SECURITY:-starttls}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD_FILE: ${SMTP_PASSWORD_FILE:-}
+      SCHOOL_PUBLIC_URL: ${SCHOOL_PUBLIC_URL:-}
+      RAW_RETENTION_DAYS: ${RAW_RETENTION_DAYS:?Defina la retención de crudos}
+      FEATURE_RETENTION_DAYS: ${FEATURE_RETENTION_DAYS:?Defina la retención de derivados}
+      EXPORT_TTL_HOURS: ${EXPORT_TTL_HOURS:-24}
+    volumes: ["runtime:/workspace/.runtime", "../.runtime/provider-secrets:/run/provider-secrets:ro"]
+    depends_on:
+      db: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/health',timeout=4).status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+
+  worker:
+    <<: *hardening
+    build: {context: .., dockerfile: infra/Dockerfile.backend}
+    read_only: true
+    tmpfs: ["/tmp"]
+    command: ["python", "-m", "worker.main"]
+    environment: *backend
+    volumes:
+      - "runtime:/workspace/.runtime"
+      - "./worker-healthcheck.py:/healthcheck.py:ro"
+      - "../.runtime/provider-secrets:/run/provider-secrets:ro"
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "python", "/healthcheck.py"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [private]
+
+  web:
+    <<: *hardening
+    user: "101:101"
+    build: {context: .., dockerfile: infra/Dockerfile.web}
+    read_only: true
+    tmpfs: ["/tmp", "/var/cache/nginx", "/var/run"]
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8080/"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [private]
+
+  proxy:
+    <<: *hardening
+    image: caddy:2.10.2-alpine
+    environment:
+      SCHOOL_HOST: ${SCHOOL_HOST:?Defina SCHOOL_HOST (dominio o nombre de revisión)}
+      SCHOOL_ACME_EMAIL: ${SCHOOL_ACME_EMAIL:-}
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${HTTPS_PORT:-8444}:8443"
+    volumes:
+      - "./${CADDYFILE:-Caddyfile.REAL}:/etc/caddy/Caddyfile:ro"
+      - "caddy_data:/data"
+      - "caddy_config:/config"
+    depends_on:
+      web: {condition: service_healthy}
+    networks: [private]
+
+networks:
+  private:
+    internal: true
+
+volumes:
+  database:
+  runtime:
+  caddy_data:
+  caddy_config:

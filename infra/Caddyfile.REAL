@@ -1,0 +1,41 @@
+# REAL product - private review over HTTPS with an internal CA (no public domain).
+# The CA cert must be explicitly trusted on each test device; see docs/producto.md.
+{
+	admin off
+	auto_https disable_redirects
+	servers {
+		trusted_proxies static private_ranges
+	}
+}
+
+https://{$SCHOOL_HOST}:8443 {
+	tls internal
+
+	header {
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+	}
+
+	request_body {
+		max_size 2MB
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:8080
+	}
+
+	log {
+		output stdout
+		format filter {
+			request>headers>Authorization delete
+			request>headers>Cookie delete
+			request>headers>Set-Cookie delete
+		}
+	}
+}

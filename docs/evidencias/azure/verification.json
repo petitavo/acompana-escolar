@@ -1,0 +1,14 @@
+{
+  "url": "https://acompana-product-zrzcsjpld7gfm.mexicocentral.cloudapp.azure.com",
+  "tls_verified": true,
+  "health": {
+    "status": "ok",
+    "mode": "REAL",
+    "version": "0.3.0"
+  },
+  "web_http": 200,
+  "login_http": 200,
+  "apk_http": 200,
+  "apk_bytes": 167056166,
+  "checked_at": "2026-09-10T04:35:42Z"
+}

@@ -1,0 +1,41 @@
+# REAL product - public hosting on your own domain. Used with compose.PUBLIC.yaml.
+# Caddy obtains and renews a public certificate over ACME for {$SCHOOL_HOST}.
+{
+	admin off
+	email {$SCHOOL_ACME_EMAIL}
+}
+
+{$SCHOOL_HOST} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		Referrer-Policy "no-referrer"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+	}
+
+	request_body {
+		max_size 2MB
+	}
+
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:8080
+	}
+
+	log {
+		output stdout
+		format filter {
+			request>headers>Authorization delete
+			request>headers>Cookie delete
+			request>headers>Set-Cookie delete
+		}
+	}
+}
+
+# Plain HTTP is redirected to HTTPS automatically by Caddy; no other listener.

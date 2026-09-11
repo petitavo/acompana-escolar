@@ -1,0 +1,6059 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Acompaña Escolar",
+    "description": "Producto escolar con roles, participación informada, análisis y revisión profesional. Herramientas DEMO y LAB separadas. No diagnóstico automático.",
+    "version": "0.3.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "summary": "Login",
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "summary": "Logout",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "summary": "Me",
+        "operationId": "me_api_v1_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/collection-policy": {
+      "get": {
+        "summary": "Policy",
+        "operationId": "policy_api_v1_me_collection_policy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/enrollments/redeem": {
+      "post": {
+        "summary": "Enroll",
+        "operationId": "enroll_api_v1_enrollments_redeem_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Enrollment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/participation-events": {
+      "post": {
+        "summary": "Participate",
+        "operationId": "participate_api_v1_me_participation_events_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Participation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/capture-sessions": {
+      "post": {
+        "summary": "Capture",
+        "operationId": "capture_api_v1_capture_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CaptureInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/events/batch": {
+      "post": {
+        "summary": "Events Batch",
+        "operationId": "events_batch_api_v1_events_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Batch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/questionnaires/due": {
+      "get": {
+        "summary": "Due",
+        "operationId": "due_api_v1_questionnaires_due_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/questionnaire-responses": {
+      "get": {
+        "summary": "Response History",
+        "operationId": "response_history_api_v1_me_questionnaire_responses_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/questionnaire-responses": {
+      "post": {
+        "summary": "Submit",
+        "operationId": "submit_api_v1_questionnaire_responses_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswerInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/contact-requests": {
+      "post": {
+        "summary": "Contact",
+        "operationId": "contact_api_v1_contact_requests_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me/deletion-requests": {
+      "post": {
+        "summary": "Request Deletion",
+        "operationId": "request_deletion_api_v1_me_deletion_requests_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/cases": {
+      "get": {
+        "summary": "Cases",
+        "operationId": "cases_api_v1_psych_cases_get",
+        "parameters": [
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Group"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/cases/{ident}": {
+      "get": {
+        "summary": "Case Detail",
+        "operationId": "case_detail_api_v1_psych_cases__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/cases/{ident}/transitions": {
+      "post": {
+        "summary": "Transition",
+        "operationId": "transition_api_v1_psych_cases__ident__transitions_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Transition"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/cases/{ident}/notes": {
+      "post": {
+        "summary": "Note",
+        "operationId": "note_api_v1_psych_cases__ident__notes_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Note"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/participants/{ident}/summary": {
+      "get": {
+        "summary": "Summary",
+        "operationId": "summary_api_v1_psych_participants__ident__summary_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/psych/usability-feedback": {
+      "post": {
+        "summary": "Feedback",
+        "operationId": "feedback_api_v1_psych_usability_feedback_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Feedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/overview": {
+      "get": {
+        "summary": "Overview",
+        "operationId": "overview_api_v1_lab_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/devices": {
+      "get": {
+        "summary": "Devices",
+        "operationId": "devices_api_v1_lab_devices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/devices/{ident}": {
+      "get": {
+        "summary": "Device Detail",
+        "operationId": "device_detail_api_v1_lab_devices__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/events": {
+      "get": {
+        "summary": "Event List",
+        "operationId": "event_list_api_v1_lab_events_get",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "event_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Event Type"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/features": {
+      "get": {
+        "summary": "Features",
+        "operationId": "features_api_v1_lab_features_get",
+        "parameters": [
+          {
+            "name": "device_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Device Id"
+            }
+          },
+          {
+            "name": "day",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Day"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/features/{ident}/lineage": {
+      "get": {
+        "summary": "Lineage",
+        "operationId": "lineage_api_v1_lab_features__ident__lineage_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/reprocessing-jobs": {
+      "post": {
+        "summary": "Reprocess",
+        "operationId": "reprocess_api_v1_lab_reprocessing_jobs_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReprocessInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/training-runs": {
+      "post": {
+        "summary": "Train",
+        "operationId": "train_api_v1_lab_training_runs_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JobInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "Jobs",
+        "operationId": "jobs_api_v1_lab_training_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/jobs": {
+      "get": {
+        "summary": "Jobs",
+        "operationId": "jobs_api_v1_lab_jobs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/training-runs/{ident}": {
+      "get": {
+        "summary": "Job Detail",
+        "operationId": "job_detail_api_v1_lab_training_runs__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/exports": {
+      "post": {
+        "summary": "Export",
+        "operationId": "export_api_v1_lab_exports_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExportInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/lab/exports/{ident}/download": {
+      "get": {
+        "summary": "Download",
+        "operationId": "download_api_v1_lab_exports__ident__download_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/bootstrap": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Bootstrap Status",
+        "operationId": "bootstrap_status_api_v1_school_bootstrap_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/setup": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Setup",
+        "operationId": "setup_api_v1_school_setup_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Setup"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/settings": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Get Settings",
+        "operationId": "get_settings_api_v1_school_settings_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Put Settings",
+        "operationId": "put_settings_api_v1_school_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Settings"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/accounts": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Accounts",
+        "operationId": "accounts_api_v1_school_accounts_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Create Account",
+        "operationId": "create_account_api_v1_school_accounts_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Account"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/accounts/{ident}/disable": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Disable Account",
+        "operationId": "disable_account_api_v1_school_accounts__ident__disable_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/classrooms": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Classrooms",
+        "operationId": "classrooms_api_v1_school_classrooms_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Create Classroom",
+        "operationId": "create_classroom_api_v1_school_classrooms_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClassroomInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Create Student",
+        "operationId": "create_student_api_v1_school_students_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StudentInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Students",
+        "operationId": "students_api_v1_school_students_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/import": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Import Students",
+        "operationId": "import_students_api_v1_school_students_import_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CsvInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/assign/{user_id}": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Assign Student",
+        "operationId": "assign_student_api_v1_school_students__ident__assign__user_id__post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/guardian-link": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Renew Guardian",
+        "operationId": "renew_guardian_api_v1_school_students__ident__guardian_link_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/guardian/info": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Guardian Info",
+        "operationId": "guardian_info_api_v1_school_guardian_info_get",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 16,
+              "maxLength": 200,
+              "title": "Token"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/guardian/approve": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Guardian Approve",
+        "operationId": "guardian_approve_api_v1_school_guardian_approve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GuardianApproval"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/guardian/withdraw": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Guardian Withdraw",
+        "operationId": "guardian_withdraw_api_v1_school_guardian_withdraw_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/enroll": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Enroll Student",
+        "operationId": "enroll_student_api_v1_school_enroll_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEnrollment"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/withdraw": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Admin Withdraw",
+        "operationId": "admin_withdraw_api_v1_school_students__ident__withdraw_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Student Home",
+        "operationId": "student_home_api_v1_school_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/participation": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Student Participation",
+        "operationId": "student_participation_api_v1_school_me_participation_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ParticipationInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/questionnaires": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Due Questionnaires",
+        "operationId": "due_questionnaires_api_v1_school_me_questionnaires_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Answer Questionnaire",
+        "operationId": "answer_questionnaire_api_v1_school_me_questionnaires_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchoolAnswer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/support": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Support",
+        "operationId": "support_api_v1_school_me_support_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/requests": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "My Requests",
+        "operationId": "my_requests_api_v1_school_me_requests_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/appointments/{ident}/confirm": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Confirm Appointment",
+        "operationId": "confirm_appointment_api_v1_school_me_appointments__ident__confirm_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/cases": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "School Cases",
+        "operationId": "school_cases_api_v1_school_cases_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/overview": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Overview",
+        "operationId": "overview_api_v1_school_overview_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/profile": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Clinical Profile",
+        "operationId": "clinical_profile_api_v1_school_students__ident__profile_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/followups": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Followups",
+        "operationId": "followups_api_v1_school_followups_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Create Followup",
+        "operationId": "create_followup_api_v1_school_followups_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowupInput"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/followups/{ident}": {
+      "put": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Update Followup",
+        "operationId": "update_followup_api_v1_school_followups__ident__put",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FollowupUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/calendar": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Calendar",
+        "operationId": "calendar_api_v1_school_calendar_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Create Calendar",
+        "operationId": "create_calendar_api_v1_school_calendar_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/calendar/{ident}": {
+      "delete": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Delete Calendar",
+        "operationId": "delete_calendar_api_v1_school_calendar__ident__delete",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/cohort-summary/{ident}": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Cohort Summary",
+        "operationId": "cohort_summary_api_v1_school_cohort_summary__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/notifications": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Inbox",
+        "operationId": "inbox_api_v1_school_notifications_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/notifications/{ident}/ack": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Acknowledge Notification",
+        "operationId": "acknowledge_notification_api_v1_school_notifications__ident__ack_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/notifications/{ident}/delivered": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Delivered Notification",
+        "operationId": "delivered_notification_api_v1_school_notifications__ident__delivered_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/push-token": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Push Token",
+        "operationId": "push_token_api_v1_school_push_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/preferences": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Preferences",
+        "operationId": "preferences_api_v1_school_preferences_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Save Preferences",
+        "operationId": "save_preferences_api_v1_school_preferences_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/channels": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Channels",
+        "operationId": "channels_api_v1_school_channels_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/authorizations": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Authorization History",
+        "operationId": "authorization_history_api_v1_school_students__ident__authorizations_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/report": {
+      "get": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Individual Report",
+        "operationId": "individual_report_api_v1_school_students__ident__report_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time",
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/accounts/{ident}/password": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Reset Password",
+        "operationId": "reset_password_api_v1_school_accounts__ident__password_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordReset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/students/{ident}/access-link": {
+      "post": {
+        "tags": [
+          "Producto escolar"
+        ],
+        "summary": "Renew Student Access",
+        "operationId": "renew_student_access_api_v1_school_students__ident__access_link_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/sensors": {
+      "post": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Ingest",
+        "operationId": "ingest_api_v1_school_me_sensors_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SensorBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/home-zone": {
+      "put": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Home Zone",
+        "operationId": "home_zone_api_v1_school_me_home_zone_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HomeZone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Remove Home Zone",
+        "operationId": "remove_home_zone_api_v1_school_me_home_zone_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/sensor-summary": {
+      "post": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Local Summary",
+        "operationId": "local_summary_api_v1_school_me_sensor_summary_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalSummary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/diagnostics/devices": {
+      "get": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Devices",
+        "operationId": "devices_api_v1_school_diagnostics_devices_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/diagnostics/{ident}": {
+      "get": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Diagnostic",
+        "operationId": "diagnostic_api_v1_school_diagnostics__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "usage",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/diagnostics/{ident}/export": {
+      "get": {
+        "tags": [
+          "Sensores autorizados"
+        ],
+        "summary": "Export Diagnostic",
+        "operationId": "export_diagnostic_api_v1_school_diagnostics__ident__export_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "usage",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "start",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "name": "end",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models": {
+      "get": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Registry",
+        "operationId": "registry_api_v1_school_models_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/datasets": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Import Dataset",
+        "operationId": "import_dataset_api_v1_school_models_datasets_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/datasets/build": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Build Local Dataset",
+        "description": "A05: construct an immutable dataset from local authorized responses + features\n+ mobility. ``?preview=true`` returns the selection/exclusions report without\npersisting anything.",
+        "operationId": "build_local_dataset_api_v1_school_models_datasets_build_post",
+        "parameters": [
+          {
+            "name": "preview",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Preview"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DatasetBuildSpec"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/schedule": {
+      "get": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Get Schedule",
+        "operationId": "get_schedule_api_v1_school_models_schedule_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Put Schedule",
+        "operationId": "put_schedule_api_v1_school_models_schedule_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingScheduleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/datasets/{ident}": {
+      "get": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Dataset Detail",
+        "operationId": "dataset_detail_api_v1_school_models_datasets__ident__get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/datasets/{ident}/train": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Train Dataset",
+        "operationId": "train_dataset_api_v1_school_models_datasets__ident__train_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/import": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Import Model",
+        "operationId": "import_model_api_v1_school_models_import_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/{ident}/decision": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Model Decision",
+        "operationId": "model_decision_api_v1_school_models__ident__decision_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ModelDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/{ident}/infer": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Queue Inference",
+        "operationId": "queue_inference_api_v1_school_models__ident__infer_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/{ident}/predictions": {
+      "get": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Predictions",
+        "operationId": "predictions_api_v1_school_models__ident__predictions_get",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/models/aggregate-jobs/{ident}/retry": {
+      "post": {
+        "tags": [
+          "Modelos y evaluación"
+        ],
+        "summary": "Retry Aggregate",
+        "operationId": "retry_aggregate_api_v1_school_models_aggregate_jobs__ident__retry_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/questionnaires/history": {
+      "get": {
+        "tags": [
+          "Historial de respuestas"
+        ],
+        "summary": "History",
+        "operationId": "history_api_v1_school_me_questionnaires_history_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/school/me/questionnaires/{ident}/corrections": {
+      "post": {
+        "tags": [
+          "Historial de respuestas"
+        ],
+        "summary": "Correct",
+        "operationId": "correct_api_v1_school_me_questionnaires__ident__corrections_post",
+        "parameters": [
+          {
+            "name": "ident",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Ident"
+            }
+          },
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Correction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Account": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.@-]{3,100}$",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12,
+            "title": "Password"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "psychologist",
+              "practitioner",
+              "director",
+              "researcher",
+              "admin"
+            ],
+            "title": "Role"
+          },
+          "supervisor_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supervisor Id"
+          },
+          "scopes": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "diagnostics",
+                "raw_location",
+                "models",
+                "raw_export"
+              ]
+            },
+            "type": "array",
+            "title": "Scopes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password",
+          "role"
+        ],
+        "title": "Account"
+      },
+      "AnswerInput": {
+        "properties": {
+          "instrument_code": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Instrument Code"
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Answers"
+          },
+          "applied_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Applied At"
+          },
+          "recall_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recall Start"
+          },
+          "recall_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recall End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instrument_code",
+          "answers",
+          "applied_at",
+          "recall_start",
+          "recall_end"
+        ],
+        "title": "AnswerInput"
+      },
+      "Batch": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventInput"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "Batch"
+      },
+      "CalendarInput": {
+        "properties": {
+          "classroom_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Classroom Id"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "exam",
+              "vacation",
+              "school",
+              "schedule"
+            ],
+            "title": "Kind"
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start At"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "kind",
+          "start_at",
+          "end_at"
+        ],
+        "title": "CalendarInput"
+      },
+      "CaptureInput": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start At"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End At"
+          },
+          "success": {
+            "type": "boolean",
+            "title": "Success"
+          },
+          "permission_before": {
+            "type": "boolean",
+            "title": "Permission Before"
+          },
+          "permission_after": {
+            "type": "boolean",
+            "title": "Permission After"
+          },
+          "count": {
+            "type": "integer",
+            "maximum": 1000000.0,
+            "minimum": 0.0,
+            "title": "Count"
+          },
+          "error": {
+            "type": "string",
+            "enum": [
+              "permission_missing",
+              "device_locked",
+              "query_failed",
+              "none"
+            ],
+            "title": "Error",
+            "default": "none"
+          },
+          "battery": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery"
+          },
+          "charging": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Charging"
+          },
+          "connected": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Connected"
+          },
+          "outbox_pending": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Outbox Pending",
+            "default": 0
+          },
+          "monotonic_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Monotonic Ms"
+          },
+          "keyguard_available": {
+            "type": "boolean",
+            "title": "Keyguard Available",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "start_at",
+          "end_at",
+          "success",
+          "permission_before",
+          "permission_after",
+          "count"
+        ],
+        "title": "CaptureInput"
+      },
+      "ClassroomInput": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "grade": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Grade"
+          },
+          "period": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Period"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "grade",
+          "period"
+        ],
+        "title": "ClassroomInput"
+      },
+      "ContactInput": {
+        "properties": {
+          "requested_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Requested At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "requested_at"
+        ],
+        "title": "ContactInput"
+      },
+      "Correction": {
+        "properties": {
+          "answers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Answers"
+          },
+          "functioning": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Functioning"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers",
+          "reason"
+        ],
+        "title": "Correction"
+      },
+      "CsvInput": {
+        "properties": {
+          "csv": {
+            "type": "string",
+            "maxLength": 100000,
+            "minLength": 1,
+            "title": "Csv"
+          },
+          "classroom_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Classroom Id"
+          },
+          "psychologist_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Psychologist Id"
+          },
+          "is_test": {
+            "type": "boolean",
+            "title": "Is Test",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "csv",
+          "classroom_id",
+          "psychologist_id"
+        ],
+        "title": "CsvInput"
+      },
+      "DatasetBuildSpec": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Name"
+          },
+          "task": {
+            "type": "string",
+            "enum": [
+              "concurrent",
+              "prospective"
+            ],
+            "title": "Task"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "clinical",
+              "research"
+            ],
+            "title": "Purpose",
+            "default": "clinical"
+          },
+          "features": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "interactive_minutes",
+                "night_interactive_minutes",
+                "interactive_session_count",
+                "keyguard_hidden_count",
+                "observed_distance_m",
+                "radius_gyration_m",
+                "home_minutes",
+                "place_entropy",
+                "observed_steps"
+              ]
+            },
+            "type": "array",
+            "maxItems": 9,
+            "minItems": 1,
+            "title": "Features"
+          },
+          "authorization_reference": {
+            "type": "string",
+            "maxLength": 400,
+            "minLength": 10,
+            "title": "Authorization Reference"
+          },
+          "include_test": {
+            "type": "boolean",
+            "title": "Include Test",
+            "default": false
+          },
+          "from_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Day"
+          },
+          "to_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Day"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "task",
+          "features",
+          "authorization_reference"
+        ],
+        "title": "DatasetBuildSpec"
+      },
+      "DeviceInfo": {
+        "properties": {
+          "android_api": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 29.0,
+            "title": "Android Api"
+          },
+          "manufacturer": {
+            "type": "string",
+            "maxLength": 80,
+            "title": "Manufacturer"
+          },
+          "model": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Model"
+          },
+          "app_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "App Version"
+          },
+          "timezone": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Timezone"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "android_api",
+          "manufacturer",
+          "model",
+          "app_version",
+          "timezone"
+        ],
+        "title": "DeviceInfo"
+      },
+      "Enrollment": {
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 16,
+            "title": "Invitation"
+          },
+          "device": {
+            "$ref": "#/components/schemas/DeviceInfo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "invitation",
+          "device"
+        ],
+        "title": "Enrollment"
+      },
+      "EventInput": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "event_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Event Id"
+          },
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Device Id"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "utc_offset_minutes": {
+            "type": "integer",
+            "maximum": 840.0,
+            "minimum": -840.0,
+            "title": "Utc Offset Minutes",
+            "default": -300
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "SCREEN_INTERACTIVE",
+              "SCREEN_NON_INTERACTIVE",
+              "KEYGUARD_SHOWN",
+              "KEYGUARD_HIDDEN",
+              "ACTIVITY_RESUMED",
+              "ACTIVITY_PAUSED",
+              "DEVICE_SHUTDOWN",
+              "DEVICE_STARTUP"
+            ],
+            "title": "Event Type"
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "android_usage_events",
+              "synthetic_generator"
+            ],
+            "title": "Source"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/EventPayload"
+          },
+          "capture_session_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Capture Session Id"
+          },
+          "consent_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Consent Version",
+            "default": "lab-v1"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "event_id",
+          "device_id",
+          "occurred_at",
+          "timezone",
+          "event_type",
+          "source",
+          "capture_session_id"
+        ],
+        "title": "EventInput"
+      },
+      "EventPayload": {
+        "properties": {
+          "package": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "pattern": "^[a-zA-Z0-9_.]+$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EventPayload"
+      },
+      "ExportInput": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "raw",
+              "features",
+              "labeled"
+            ],
+            "title": "Kind"
+          },
+          "format": {
+            "type": "string",
+            "enum": [
+              "csv",
+              "jsonl"
+            ],
+            "title": "Format",
+            "default": "csv"
+          },
+          "start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "start",
+          "end"
+        ],
+        "title": "ExportInput"
+      },
+      "Feedback": {
+        "properties": {
+          "duration_seconds": {
+            "type": "integer",
+            "maximum": 86400.0,
+            "minimum": 0.0,
+            "title": "Duration Seconds"
+          },
+          "clarity": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Clarity"
+          },
+          "usefulness": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Usefulness"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Comment",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "duration_seconds",
+          "clarity",
+          "usefulness"
+        ],
+        "title": "Feedback"
+      },
+      "FollowupInput": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Case Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "task",
+              "appointment"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "location": {
+            "type": "string",
+            "maxLength": 200,
+            "title": "Location",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "case_id",
+          "kind",
+          "title",
+          "due_at"
+        ],
+        "title": "FollowupInput"
+      },
+      "FollowupUpdate": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "confirmed",
+              "completed",
+              "cancelled"
+            ],
+            "title": "State"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "contact_confirmed": {
+            "type": "boolean",
+            "title": "Contact Confirmed",
+            "default": false
+          },
+          "outcome": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Outcome",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "version"
+        ],
+        "title": "FollowupUpdate"
+      },
+      "GuardianApproval": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 16,
+            "title": "Token"
+          },
+          "verification_code": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 6,
+            "title": "Verification Code"
+          },
+          "full_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Full Name"
+          },
+          "relationship": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 3,
+            "title": "Relationship"
+          },
+          "identity_reference": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Identity Reference"
+          },
+          "document_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Document Version"
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token",
+          "verification_code",
+          "full_name",
+          "relationship",
+          "identity_reference",
+          "document_version",
+          "accepted"
+        ],
+        "title": "GuardianApproval"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HomeZone": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          },
+          "accuracy_m": {
+            "type": "number",
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Accuracy M"
+          },
+          "radius_m": {
+            "type": "integer",
+            "maximum": 500.0,
+            "minimum": 100.0,
+            "title": "Radius M",
+            "default": 150
+          },
+          "voluntary": {
+            "type": "boolean",
+            "const": true,
+            "title": "Voluntary"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "accuracy_m",
+          "voluntary"
+        ],
+        "title": "HomeZone"
+      },
+      "JobInput": {
+        "properties": {
+          "seed": {
+            "type": "integer",
+            "maximum": 2147483647.0,
+            "minimum": 0.0,
+            "title": "Seed",
+            "default": 20260906
+          },
+          "task": {
+            "type": "string",
+            "enum": [
+              "concurrent",
+              "prospective"
+            ],
+            "title": "Task",
+            "default": "concurrent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "JobInput"
+      },
+      "LocalFeature": {
+        "properties": {
+          "value": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "missing",
+              "partial",
+              "observed"
+            ],
+            "title": "State"
+          },
+          "eligible": {
+            "type": "boolean",
+            "title": "Eligible"
+          },
+          "operational_coverage": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Operational Coverage"
+          },
+          "observed_minutes": {
+            "type": "number",
+            "maximum": 1500.0,
+            "minimum": 0.0,
+            "title": "Observed Minutes"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Window End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "unit",
+          "state",
+          "eligible",
+          "operational_coverage",
+          "observed_minutes",
+          "window_start",
+          "window_end"
+        ],
+        "title": "LocalFeature"
+      },
+      "LocalQuality": {
+        "properties": {
+          "observed_minutes": {
+            "type": "number",
+            "maximum": 1500.0,
+            "minimum": 0.0,
+            "title": "Observed Minutes"
+          },
+          "gap_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Gap Count"
+          },
+          "excluded_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Excluded Count"
+          },
+          "step_resets": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Step Resets"
+          },
+          "inside_minutes": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inside Minutes"
+          },
+          "outside_minutes": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outside Minutes"
+          },
+          "uncertain_minutes": {
+            "type": "number",
+            "maximum": 1500.0,
+            "minimum": 0.0,
+            "title": "Uncertain Minutes"
+          },
+          "period_minutes": {
+            "type": "number",
+            "maximum": 1500.0,
+            "minimum": 0.0,
+            "title": "Period Minutes"
+          },
+          "cluster_observed_minutes": {
+            "type": "number",
+            "maximum": 1500.0,
+            "minimum": 0.0,
+            "title": "Cluster Observed Minutes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "observed_minutes",
+          "gap_count",
+          "excluded_count",
+          "step_resets",
+          "inside_minutes",
+          "outside_minutes",
+          "uncertain_minutes",
+          "period_minutes",
+          "cluster_observed_minutes"
+        ],
+        "title": "LocalQuality"
+      },
+      "LocalSummary": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "features": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/LocalFeature"
+            },
+            "type": "object",
+            "title": "Features"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/LocalQuality"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "day",
+          "version",
+          "features",
+          "quality"
+        ],
+        "title": "LocalSummary"
+      },
+      "Login": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Login"
+      },
+      "ModelDecision": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "shadow",
+              "active",
+              "retired"
+            ],
+            "title": "State"
+          },
+          "rationale": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 15,
+            "title": "Rationale"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "rationale"
+        ],
+        "title": "ModelDecision"
+      },
+      "ModelImport": {
+        "properties": {
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Dataset Id"
+          },
+          "artifact_base64": {
+            "type": "string",
+            "maxLength": 700000,
+            "title": "Artifact Base64"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset_id",
+          "artifact_base64"
+        ],
+        "title": "ModelImport"
+      },
+      "Note": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "Note"
+      },
+      "Participation": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "consent",
+              "pause",
+              "resume",
+              "revoke",
+              "package_policy"
+            ],
+            "title": "Action"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "consent_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Consent Version",
+            "default": "lab-v1"
+          },
+          "adult": {
+            "type": "boolean",
+            "title": "Adult",
+            "default": false
+          },
+          "share_packages": {
+            "type": "boolean",
+            "title": "Share Packages",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "occurred_at"
+        ],
+        "title": "Participation"
+      },
+      "ParticipationInput": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "assent",
+              "consent",
+              "pause",
+              "resume",
+              "withdraw",
+              "preferences"
+            ],
+            "title": "Action"
+          },
+          "document_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Document Version"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "usage": {
+            "type": "boolean",
+            "title": "Usage",
+            "default": false
+          },
+          "location": {
+            "type": "boolean",
+            "title": "Location",
+            "default": false
+          },
+          "steps": {
+            "type": "boolean",
+            "title": "Steps",
+            "default": false
+          },
+          "raw_location_upload": {
+            "type": "boolean",
+            "title": "Raw Location Upload",
+            "default": false
+          },
+          "research_access": {
+            "type": "boolean",
+            "title": "Research Access",
+            "default": false
+          },
+          "reminder_time": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Reminder Time",
+            "default": "17:00"
+          },
+          "reminders": {
+            "type": "boolean",
+            "title": "Reminders",
+            "default": true
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "action",
+          "document_version",
+          "occurred_at"
+        ],
+        "title": "ParticipationInput"
+      },
+      "PasswordReset": {
+        "properties": {
+          "password": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 12,
+            "title": "Password"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "title": "PasswordReset"
+      },
+      "PushRegistration": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 20,
+            "title": "Token"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "PushRegistration"
+      },
+      "ReprocessInput": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Device Id"
+          },
+          "start": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "Start"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+            "title": "End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "device_id",
+          "start",
+          "end"
+        ],
+        "title": "ReprocessInput"
+      },
+      "Resource": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 150,
+            "minLength": 3,
+            "title": "Title"
+          },
+          "contact": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Contact"
+          },
+          "verified_by": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 3,
+            "title": "Verified By"
+          },
+          "verified_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Verified At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "title",
+          "contact",
+          "verified_by",
+          "verified_at"
+        ],
+        "title": "Resource"
+      },
+      "SchoolAnswer": {
+        "properties": {
+          "instrument_code": {
+            "type": "string",
+            "const": "PHQ9_ES_AETC_2016",
+            "title": "Instrument Code"
+          },
+          "instrument_version": {
+            "type": "string",
+            "const": "AETC-2016-es-1",
+            "title": "Instrument Version"
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Answers"
+          },
+          "functioning": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Functioning"
+          },
+          "applied_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Applied At"
+          },
+          "recall_start": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recall Start"
+          },
+          "recall_end": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recall End"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instrument_code",
+          "instrument_version",
+          "answers",
+          "applied_at",
+          "recall_start",
+          "recall_end"
+        ],
+        "title": "SchoolAnswer"
+      },
+      "SensorBatch": {
+        "properties": {
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/SensorInput"
+            },
+            "type": "array",
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Points"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "points"
+        ],
+        "title": "SensorBatch"
+      },
+      "SensorInput": {
+        "properties": {
+          "segment_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 40
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "location",
+              "steps"
+            ],
+            "title": "Kind"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone"
+          },
+          "utc_offset_minutes": {
+            "type": "integer",
+            "maximum": 840.0,
+            "minimum": -840.0,
+            "title": "Utc Offset Minutes"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 90.0,
+                "minimum": -90.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 180.0,
+                "minimum": -180.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "accuracy_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy M"
+          },
+          "age_ms": {
+            "type": "integer",
+            "maximum": 86400000.0,
+            "minimum": 0.0,
+            "title": "Age Ms",
+            "default": 0
+          },
+          "provider": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Provider"
+          },
+          "permission": {
+            "type": "string",
+            "enum": [
+              "precise",
+              "approximate",
+              "activity"
+            ],
+            "title": "Permission"
+          },
+          "mock": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mock"
+          },
+          "counter": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counter"
+          },
+          "boot_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 100
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Boot Id"
+          },
+          "battery": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Battery"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "occurred_at",
+          "timezone",
+          "utc_offset_minutes",
+          "provider",
+          "permission"
+        ],
+        "title": "SensorInput"
+      },
+      "Settings": {
+        "properties": {
+          "document_version": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 3,
+            "title": "Document Version",
+            "default": "participacion-v1"
+          },
+          "participation_document": {
+            "type": "string",
+            "maxLength": 12000,
+            "minLength": 30,
+            "title": "Participation Document"
+          },
+          "purpose": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 10,
+            "title": "Purpose"
+          },
+          "primary_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Primary Id"
+          },
+          "backup_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Backup Id"
+          },
+          "coverage": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 5,
+            "title": "Coverage"
+          },
+          "days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days",
+            "default": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "opens": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Opens",
+            "default": "08:00"
+          },
+          "closes": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "Closes",
+            "default": "17:00"
+          },
+          "acknowledgement_minutes": {
+            "type": "integer",
+            "maximum": 10080.0,
+            "minimum": 5.0,
+            "title": "Acknowledgement Minutes",
+            "default": 1440
+          },
+          "safety_minutes": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Safety Minutes",
+            "default": 60
+          },
+          "escalation_minutes": {
+            "type": "integer",
+            "maximum": 1440.0,
+            "minimum": 5.0,
+            "title": "Escalation Minutes",
+            "default": 60
+          },
+          "resources": {
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Resources"
+          },
+          "instrument_enabled": {
+            "type": "boolean",
+            "title": "Instrument Enabled",
+            "default": false
+          },
+          "professional_decision": {
+            "type": "string",
+            "maxLength": 3000,
+            "title": "Professional Decision",
+            "default": ""
+          },
+          "cadence_days": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 14.0,
+            "title": "Cadence Days",
+            "default": 14
+          },
+          "minimum_group": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 5.0,
+            "title": "Minimum Group",
+            "default": 10
+          },
+          "external_notifications_authorized": {
+            "type": "boolean",
+            "title": "External Notifications Authorized",
+            "default": false
+          },
+          "raw_location_retention_days": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Raw Location Retention Days",
+            "default": 7
+          },
+          "location_interval_minutes": {
+            "type": "integer",
+            "maximum": 120.0,
+            "minimum": 5.0,
+            "title": "Location Interval Minutes",
+            "default": 15
+          },
+          "location_distance_meters": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 20.0,
+            "title": "Location Distance Meters",
+            "default": 100
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "participation_document",
+          "purpose",
+          "coverage"
+        ],
+        "title": "Settings"
+      },
+      "Setup": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 3,
+            "title": "Name"
+          },
+          "timezone": {
+            "type": "string",
+            "title": "Timezone",
+            "default": "America/Lima"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "Setup"
+      },
+      "StudentInput": {
+        "properties": {
+          "display_name": {
+            "type": "string",
+            "maxLength": 160,
+            "minLength": 2,
+            "title": "Display Name"
+          },
+          "classroom_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Classroom Id"
+          },
+          "psychologist_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Psychologist Id"
+          },
+          "minor": {
+            "type": "boolean",
+            "title": "Minor",
+            "default": true
+          },
+          "is_test": {
+            "type": "boolean",
+            "title": "Is Test",
+            "default": true
+          },
+          "guardian_channel": {
+            "type": "string",
+            "maxLength": 160,
+            "title": "Guardian Channel",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "display_name",
+          "classroom_id",
+          "psychologist_id"
+        ],
+        "title": "StudentInput"
+      },
+      "TrainingScheduleInput": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled",
+            "default": true
+          },
+          "cadence_days": {
+            "type": "integer",
+            "maximum": 90.0,
+            "minimum": 7.0,
+            "title": "Cadence Days"
+          },
+          "auto_retrain": {
+            "type": "boolean",
+            "title": "Auto Retrain",
+            "default": true
+          },
+          "spec": {
+            "$ref": "#/components/schemas/DatasetBuildSpec"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cadence_days",
+          "spec"
+        ],
+        "title": "TrainingScheduleInput"
+      },
+      "Transition": {
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "new",
+              "acknowledged",
+              "contact_planned",
+              "in_followup",
+              "closed"
+            ],
+            "title": "State"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Version"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "state",
+          "version",
+          "reason"
+        ],
+        "title": "Transition"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "VerifyEnrollment": {
+        "properties": {
+          "invitation": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 16,
+            "title": "Invitation"
+          },
+          "verification_code": {
+            "type": "string",
+            "maxLength": 30,
+            "minLength": 6,
+            "title": "Verification Code"
+          },
+          "device": {
+            "$ref": "#/components/schemas/DeviceInfo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "invitation",
+          "verification_code",
+          "device"
+        ],
+        "title": "VerifyEnrollment"
+      }
+    }
+  }
+}

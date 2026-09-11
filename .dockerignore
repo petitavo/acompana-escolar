@@ -1,0 +1,10 @@
+.git
+.venv
+.bootstrap
+.tooling
+.runtime
+.env*
+**/node_modules
+**/dist
+**/__pycache__
+apps/mobile

@@ -1,0 +1,6 @@
+{
+  "apps/mobile/lib/school.dart": "f64924bdd27b19eaf73a57c93b42dd001f6c09b1eae77ce29e3b585f460fbffe",
+  "apps/mobile/pubspec.yaml": "c76f452c27af8efee0ba66f081c40110dcc7f9f7e048b4dab12e844bf93747e9",
+  "apps/mobile/android/app/src/main/kotlin/pe/upc/acompana/acompana_escolar/MainActivity.kt": "458395e71d7447882c7e68db75443b92989f635a13763de6c6bcb14a5590880b",
+  "apps/mobile/android/app/src/main/kotlin/pe/upc/acompana/acompana_escolar/LocationService.kt": "f1aa53646cdf3fbb85cb472dc9f2362daf03f1a723156563860eeb7e4b134356"
+}

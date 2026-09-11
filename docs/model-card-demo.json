@@ -1,0 +1,218 @@
+{
+  "name": "XGBoost-DEMO — CHECKIN_DEMO_V1",
+  "status": "demo_trained",
+  "clinical_evidence": false,
+  "task": "prospective",
+  "seed": 20260906,
+  "participants": 11,
+  "labels": 423,
+  "coverage": {
+    "predicted_participants": 3,
+    "eligible_participants": 11,
+    "excluded_reason": "Historial sin suficientes días elegibles"
+  },
+  "partitions": {
+    "train": [
+      "069b625e-231f-5fd5-b8d8-553906279c96",
+      "23d2f955-d64a-510d-a42c-5fca67c16c8b",
+      "2ac64449-de8c-5be8-8571-da82d6001116",
+      "a570e308-358d-5abd-a111-463d5ea052bc",
+      "c5287f9d-5a29-517b-b6f3-2c293c548fd8",
+      "ec0eca54-3431-5e0d-9bfa-4f72ad39a4f7"
+    ],
+    "validation": [
+      "8734bb00-1041-5fd0-8bdd-50bb1cab8752",
+      "f1c51403-748f-5f96-b4fa-594c245689c4"
+    ],
+    "test": [
+      "0b27492d-49bb-5b6e-9512-e1957486ed87",
+      "45df42fe-e82f-5bf2-a62e-7647fd313d90",
+      "d906c0c0-682c-5279-b799-c6a1649b93d0"
+    ]
+  },
+  "metrics": {
+    "Constante DEMO": {
+      "mae": 0.9385964912280702,
+      "rmse": 1.2175615550562022,
+      "participant_mae": {
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 0.9166666666666666,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.0,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 0.8974358974358975
+      },
+      "participant_bootstrap_mae_ci95": [
+        0.8974358974358975,
+        1.0
+      ]
+    },
+    "Ridge DEMO": {
+      "mae": 0.9654437646803151,
+      "rmse": 1.2245756509714412,
+      "participant_mae": {
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 0.9623988905672393,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.0070959759770126,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 0.9266022064110728
+      },
+      "participant_bootstrap_mae_ci95": [
+        0.9266022064110727,
+        1.0070959759770126
+      ]
+    },
+    "Último cuestionario DEMO": {
+      "mae": 1.3596491228070176,
+      "rmse": 1.7646628821730508,
+      "participant_mae": {
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 1.2777777777777777,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.3846153846153846,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 1.4102564102564104
+      },
+      "participant_bootstrap_mae_ci95": [
+        1.2777777777777777,
+        1.4102564102564104
+      ]
+    },
+    "XGBoost DEMO": {
+      "mae": 1.0249977697405899,
+      "rmse": 1.2755583739269982,
+      "participant_mae": {
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 1.1245984302626715,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.0073331227669349,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 0.9507233454630926
+      },
+      "participant_bootstrap_mae_ci95": [
+        0.9507233454630925,
+        1.1245984302626715
+      ]
+    },
+    "XGBoost solo niveles DEMO": {
+      "mae": 0.9845374697133115,
+      "rmse": 1.250149447629143,
+      "participant_mae": {
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 1.0137931903203328,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.0424085213587835,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 0.899661137507512
+      },
+      "participant_bootstrap_mae_ci95": [
+        0.899661137507512,
+        1.0424085213587835
+      ]
+    }
+  },
+  "temporal": {
+    "status": "completed",
+    "embargo_days": 7,
+    "boundaries": [
+      "2026-08-15",
+      "2026-08-26"
+    ],
+    "counts": [
+      187,
+      44,
+      38
+    ],
+    "reason": null,
+    "metrics": {
+      "mae": 1.2757031917572021,
+      "rmse": 1.54240550130421,
+      "participant_mae": {
+        "069b625e-231f-5fd5-b8d8-553906279c96": 0.2669060230255127,
+        "0b27492d-49bb-5b6e-9512-e1957486ed87": 1.2384605407714844,
+        "23d2f955-d64a-510d-a42c-5fca67c16c8b": 1.4345614910125732,
+        "2ac64449-de8c-5be8-8571-da82d6001116": 0.7907626628875732,
+        "45df42fe-e82f-5bf2-a62e-7647fd313d90": 1.2612712383270264,
+        "8734bb00-1041-5fd0-8bdd-50bb1cab8752": 1.6899094581604004,
+        "a570e308-358d-5abd-a111-463d5ea052bc": 0.46296215057373047,
+        "c5287f9d-5a29-517b-b6f3-2c293c548fd8": 2.1113216876983643,
+        "d906c0c0-682c-5279-b799-c6a1649b93d0": 1.0733987092971802,
+        "ec0eca54-3431-5e0d-9bfa-4f72ad39a4f7": 0.9050179123878479,
+        "f1c51403-748f-5f96-b4fa-594c245689c4": 2.0136327743530273
+      },
+      "participant_bootstrap_mae_ci95": [
+        0.8430160747333006,
+        1.5694586507298727
+      ]
+    }
+  },
+  "validation_mae": 1.166637816490271,
+  "feature_version": "screen-v1.0",
+  "columns": [
+    "interactive_minutes_current",
+    "interactive_minutes_baseline",
+    "interactive_minutes_delta",
+    "interactive_minutes_robust_deviation",
+    "interactive_minutes_available",
+    "night_interactive_minutes_current",
+    "night_interactive_minutes_baseline",
+    "night_interactive_minutes_delta",
+    "night_interactive_minutes_robust_deviation",
+    "night_interactive_minutes_available",
+    "interactive_session_count_current",
+    "interactive_session_count_baseline",
+    "interactive_session_count_delta",
+    "interactive_session_count_robust_deviation",
+    "interactive_session_count_available",
+    "keyguard_hidden_count_current",
+    "keyguard_hidden_count_baseline",
+    "keyguard_hidden_count_delta",
+    "keyguard_hidden_count_robust_deviation",
+    "keyguard_hidden_count_available"
+  ],
+  "units": {
+    "interactive_minutes_current": "min",
+    "interactive_minutes_baseline": "min",
+    "interactive_minutes_delta": "min",
+    "interactive_minutes_robust_deviation": "proporción",
+    "interactive_minutes_available": "proporción",
+    "night_interactive_minutes_current": "min",
+    "night_interactive_minutes_baseline": "min",
+    "night_interactive_minutes_delta": "min",
+    "night_interactive_minutes_robust_deviation": "proporción",
+    "night_interactive_minutes_available": "proporción",
+    "interactive_session_count_current": "eventos",
+    "interactive_session_count_baseline": "eventos",
+    "interactive_session_count_delta": "eventos",
+    "interactive_session_count_robust_deviation": "proporción",
+    "interactive_session_count_available": "proporción",
+    "keyguard_hidden_count_current": "eventos",
+    "keyguard_hidden_count_baseline": "eventos",
+    "keyguard_hidden_count_delta": "eventos",
+    "keyguard_hidden_count_robust_deviation": "proporción",
+    "keyguard_hidden_count_available": "proporción"
+  },
+  "sha256": "c3c0e757fa013a56667faec45363a4803cb602593ba603d8d9acbf6f3c86191f",
+  "dependencies": {
+    "python": "3.12.11",
+    "xgboost": "3.0.5",
+    "scikit-learn": "1.7.1",
+    "shap": "0.48.0"
+  },
+  "created_at": "2026-09-06T04:14:35.105040+00:00",
+  "shap": {
+    "baseline": 2.1669952869415283,
+    "prediction": 2.28175687789917,
+    "contributions": {
+      "interactive_minutes_current": -0.08056044578552246,
+      "interactive_minutes_baseline": 0.13705629110336304,
+      "interactive_minutes_delta": -0.004195370711386204,
+      "interactive_minutes_robust_deviation": -0.028901997953653336,
+      "interactive_minutes_available": 0.0,
+      "night_interactive_minutes_current": 0.03268696367740631,
+      "night_interactive_minutes_baseline": 0.11155971884727478,
+      "night_interactive_minutes_delta": -0.044111862778663635,
+      "night_interactive_minutes_robust_deviation": -0.00877109169960022,
+      "night_interactive_minutes_available": 0.0,
+      "interactive_session_count_current": 0.0,
+      "interactive_session_count_baseline": 0.0,
+      "interactive_session_count_delta": 0.0,
+      "interactive_session_count_robust_deviation": 0.0,
+      "interactive_session_count_available": 0.0,
+      "keyguard_hidden_count_current": 0.0,
+      "keyguard_hidden_count_baseline": 0.0,
+      "keyguard_hidden_count_delta": 0.0,
+      "keyguard_hidden_count_robust_deviation": 0.0,
+      "keyguard_hidden_count_available": 0.0
+    },
+    "unit": "puntos CHECKIN_DEMO_V1",
+    "notice": "Variables que influyeron en la estimación del modelo; no causas."
+  },
+  "notice": "Datos y etiquetas sintéticos. Ninguna métrica constituye evidencia clínica. No se promociona a LAB."
+}

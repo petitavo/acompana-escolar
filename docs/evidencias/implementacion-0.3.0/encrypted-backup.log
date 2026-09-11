@@ -1,0 +1,3 @@
+Backup privado creado: /home/petitavo/acompana-escolar/.runtime/implementacion-a01-a10/acceptance-snapshot/.runtime/drill_8d46cadaae/backup (cifrado)
+Restauración aislada completada: restore_685e6eb9f7; 1 retiradas reaplicadas. Servidores no iniciados.
+VERIFICADO: backup cifrado con integridad, rechazo de copia manipulada y retirada reaplicada en restauración aislada.

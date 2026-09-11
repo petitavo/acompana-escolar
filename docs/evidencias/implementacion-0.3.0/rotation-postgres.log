@@ -1,0 +1,5 @@
+Objetivo   : rol "rotation_fixture_d9b7be99c9" en postgresql://supervisor_test:[redacted]@127.0.0.1:57781/postgres?client_encoding=utf8
+Nuevo secreto -> /tmp/tmpnfadamak/new-secret (0600)
+Reescribir  : /tmp/tmpnfadamak/operation.env (DATABASE_URL / POSTGRES_PASSWORD)
+Rotación aplicada. Reinicie api y worker con el nuevo secreto y verifique con operation_healthcheck.py. Sesiones activas siguen válidas hasta expirar.
+VERIFICADO: ALTER ROLE real, secreto recuperable 0600 y entorno actualizado; rol ficticio eliminado.

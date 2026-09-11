@@ -1,0 +1,803 @@
+[
+  {
+    "name": "empty",
+    "samples": [],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 0.0,
+        "gap_count": 0,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 0
+      }
+    }
+  },
+  {
+    "name": "midnight-gap",
+    "samples": [
+      {
+        "id": "-15",
+        "kind": "location",
+        "occurred_at": "2025-01-01T23:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "15",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "30",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.001,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "100",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:40:00+00:00",
+        "latitude": 0,
+        "longitude": 0.002,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      }
+    ],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": 111.1951,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": 48.1489,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 30.0,
+        "gap_count": 1,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 30.0
+      }
+    }
+  },
+  {
+    "name": "antimeridian",
+    "samples": [
+      {
+        "id": "0",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:00:00+00:00",
+        "latitude": 0,
+        "longitude": 179.999,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "15",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:15:00+00:00",
+        "latitude": 0,
+        "longitude": -179.999,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "30",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:30:00+00:00",
+        "latitude": 0,
+        "longitude": -179.998,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      }
+    ],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": 333.5852,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": 121.172,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 30.0,
+        "gap_count": 0,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 0
+      }
+    }
+  },
+  {
+    "name": "excluded",
+    "samples": [
+      {
+        "id": "0",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "15",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 101,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "30",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 600001
+      },
+      {
+        "id": "45",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "approximate",
+        "age_ms": 0
+      },
+      {
+        "id": "60",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:00:00+00:00",
+        "latitude": 0,
+        "longitude": 100,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      }
+    ],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 0.0,
+        "gap_count": 1,
+        "excluded_count": 3,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 0
+      }
+    }
+  },
+  {
+    "name": "home-entropy",
+    "samples": [
+      {
+        "id": "0",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "15",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "30",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "45",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "60",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "75",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "90",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "105",
+        "kind": "location",
+        "occurred_at": "2025-01-02T01:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "120",
+        "kind": "location",
+        "occurred_at": "2025-01-02T02:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "135",
+        "kind": "location",
+        "occurred_at": "2025-01-02T02:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      },
+      {
+        "id": "150",
+        "kind": "location",
+        "occurred_at": "2025-01-02T02:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.005,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0
+      }
+    ],
+    "home": {
+      "latitude": 0,
+      "longitude": 0
+    },
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": 555.9754,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.1042,
+          "observed_minutes": 150.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": 276.5943,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.1042,
+          "observed_minutes": 150.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": 60.0,
+          "unit": "min",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.1042,
+          "observed_minutes": 150.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": 0.687,
+          "unit": "nats",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.1042,
+          "observed_minutes": 150.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 150.0,
+        "gap_count": 0,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": 60.0,
+        "outside_minutes": 75.0,
+        "uncertain_minutes": 1305.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 135.0
+      }
+    }
+  },
+  {
+    "name": "step-reset",
+    "samples": [
+      {
+        "id": "0",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:00:00+00:00",
+        "counter": 100,
+        "boot_id": "a"
+      },
+      {
+        "id": "1",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:15:00+00:00",
+        "counter": 150,
+        "boot_id": "a"
+      },
+      {
+        "id": "2",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:30:00+00:00",
+        "counter": 3,
+        "boot_id": "b"
+      },
+      {
+        "id": "3",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:45:00+00:00",
+        "counter": 10,
+        "boot_id": "b"
+      }
+    ],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": 57,
+          "unit": "pasos",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.0208,
+          "observed_minutes": 30.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 0.0,
+        "gap_count": 0,
+        "excluded_count": 0,
+        "step_resets": 1,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 0
+      }
+    }
+  },
+  {
+    "name": "pause-segment",
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "samples": [
+      {
+        "id": "location0",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:00:00Z",
+        "segment_id": "before",
+        "latitude": 0,
+        "longitude": 0.0,
+        "accuracy_m": 10,
+        "permission": "precise"
+      },
+      {
+        "id": "steps0",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:00:00Z",
+        "segment_id": "before",
+        "counter": 100,
+        "boot_id": "same-boot"
+      },
+      {
+        "id": "location1",
+        "kind": "location",
+        "occurred_at": "2025-01-02T00:15:00Z",
+        "segment_id": "after",
+        "latitude": 0,
+        "longitude": 0.001,
+        "accuracy_m": 10,
+        "permission": "precise"
+      },
+      {
+        "id": "steps1",
+        "kind": "steps",
+        "occurred_at": "2025-01-02T00:15:00Z",
+        "segment_id": "after",
+        "counter": 500,
+        "boot_id": "same-boot"
+      }
+    ],
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": null,
+          "unit": "m",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": null,
+          "unit": "nats",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 0.0,
+        "gap_count": 1,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 0
+      }
+    }
+  }
+]

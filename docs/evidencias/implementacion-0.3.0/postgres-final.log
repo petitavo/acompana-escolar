@@ -1,0 +1,5 @@
+......................................                                   [100%]
+38 passed, 1 warning in 74.87s (0:01:14)
+Backup privado creado: /home/petitavo/acompana-escolar/.runtime/implementacion-a01-a10/acceptance-snapshot/.runtime/product_test_1d637d992c/backup (sin cifrar; solo pruebas locales)
+Restauración aislada completada: restore_5ce3161cc9; 1 retiradas reaplicadas. Servidores no iniciados.
+VERIFICADO: pruebas PostgreSQL, migración aditiva conserva registros, backup y restauración con retiradas reaplicadas.

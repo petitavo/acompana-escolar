@@ -1,0 +1,16 @@
+{
+  "version": "0.3.1",
+  "version_code": 5,
+  "sha256": "0a4054b40c95c7cd99aa46c902927fa2a8257b355db073753b45292bf6ac64bf",
+  "size": 167206490,
+  "verified_at": "2026-09-10T14:49:51.569242+00:00",
+  "url": "https://acompana-product-zrzcsjpld7gfm.mexicocentral.cloudapp.azure.com/downloads/acompana-escolar-0.3.1.apk",
+  "https_status": 200,
+  "range_status": 206,
+  "remote_sha256": "0a4054b40c95c7cd99aa46c902927fa2a8257b355db073753b45292bf6ac64bf",
+  "api": {
+    "status": "ok",
+    "mode": "REAL",
+    "version": "0.3.0"
+  }
+}
