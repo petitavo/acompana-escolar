@@ -2536,7 +2536,7 @@ export interface components {
             /** Invitation */
             invitation: string;
             /** Verification Code */
-            verification_code: string;
+            verification_code?: string | null;
             device: components["schemas"]["DeviceInfo"];
         };
     };

@@ -165,3 +165,28 @@ def test_behavior_change_is_information_unless_enabled(client):
     with SessionLocal() as db:
         expected = MODE != 'REAL'
         assert behavior_alerts(db, inv['student']['participant_id']) is expected
+
+
+def test_student_enrolls_with_single_short_code(client):
+    import re
+    c = client
+    inv, cfg = setup(c)
+    code = inv['invitation']['token']
+    assert re.fullmatch(r'[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}', code)
+    device = {'android_api': 35, 'manufacturer': 'Fixture', 'model': 'Test', 'app_version': 'test', 'timezone': 'America/Lima'}
+    c.headers.pop('authorization', None)
+    post(c, '/enroll', {'invitation': 'ZZZZ-ZZZZ', 'device': device}, code=401)
+    # Minúsculas y sin guion también valen (se dicta o se escribe a mano).
+    r = post(c, '/enroll', {'invitation': code.lower().replace('-', ' '), 'device': device})
+    assert r['token']
+    post(c, '/enroll', {'invitation': code, 'device': device}, code=401)  # un solo uso
+
+
+def test_short_code_guessing_is_throttled(client):
+    c = client
+    setup(c)
+    device = {'android_api': 35, 'manufacturer': 'Fixture', 'model': 'Test', 'app_version': 'test', 'timezone': 'America/Lima'}
+    c.headers.pop('authorization', None)
+    for _ in range(20):
+        post(c, '/enroll', {'invitation': 'ZZZZ-ZZZZ', 'device': device}, code=401)
+    post(c, '/enroll', {'invitation': 'ZZZZ-ZZZZ', 'device': device}, code=429)

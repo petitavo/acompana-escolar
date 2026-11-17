@@ -103,8 +103,9 @@ class CsvInput(Strict):
 
 
 class VerifyEnrollment(Strict):
-    invitation: str = Field(min_length=16, max_length=200)
-    verification_code: str = Field(min_length=6, max_length=30)
+    # Código de acceso corto (ABCD-2345) o, por compatibilidad, invitación larga + código aparte.
+    invitation: str = Field(min_length=8, max_length=200)
+    verification_code: str | None = Field(default=None, max_length=30)
     device: DeviceInfo
 
 

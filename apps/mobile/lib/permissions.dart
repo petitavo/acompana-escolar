@@ -122,10 +122,7 @@ List<SetupStep> setupSteps(Map status, Map device) {
           'Toca "Permitir". En la ventana de Android elige "Mientras la app está en uso" y deja activada "Ubicación precisa".',
     ),
   ];
-  if ([
-    'precise',
-    'approximate',
-  ].contains(status['location_permission'])) {
+  if (['precise', 'approximate'].contains(status['location_permission'])) {
     steps.add(
       SetupStep(
         kind: 'background',
@@ -249,7 +246,7 @@ String resultMessage(String? state, SetupStep step) => switch (state) {
     'Haz el cambio en Ajustes y vuelve con la flecha de atrás. Revisamos el resultado automáticamente.',
   'offline' =>
     'Tu elección se guardó, pero falta internet para confirmarla. Vuelve a tocar el botón cuando tengas conexión.',
-    'unavailable' =>
+  'unavailable' =>
     'Este teléfono no tiene ese ajuste. Puedes continuar con el siguiente paso.',
   _ => '',
 };
@@ -438,7 +435,11 @@ class _PermissionGuideState extends State<PermissionGuide>
 
   Widget intro(int count) => frame(
     [
-      const Icon(Icons.verified_user_outlined, size: 64, color: Color(0xff137c84)),
+      const Icon(
+        Icons.verified_user_outlined,
+        size: 64,
+        color: Color(0xff137c84),
+      ),
       const SizedBox(height: 16),
       Text(
         'Vamos a preparar tu teléfono',
@@ -538,21 +539,27 @@ class _PermissionGuideState extends State<PermissionGuide>
         const SizedBox(height: 10),
         _Section(title: 'Para qué sirve', items: s.why, icon: Icons.check),
         _Section(title: 'Lo que NO vemos', items: s.notSeen, icon: Icons.block),
-        if (!ready) _Section(title: 'Cómo hacerlo', items: [s.how], icon: Icons.touch_app_outlined),
-        if (result != null && result != 'granted' || ready && result == 'granted')
+        if (!ready)
+          _Section(
+            title: 'Cómo hacerlo',
+            items: [s.how],
+            icon: Icons.touch_app_outlined,
+          ),
+        if (result != null && result != 'granted' ||
+            ready && result == 'granted')
           Semantics(
             liveRegion: true,
             child: Container(
               margin: const EdgeInsets.only(top: 12),
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: ready ? const Color(0xffe6f4f1) : const Color(0xfffff4e5),
+                color: ready
+                    ? const Color(0xffe6f4f1)
+                    : const Color(0xfffff4e5),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                ready
-                    ? resultMessage('granted', s)
-                    : resultMessage(result, s),
+                ready ? resultMessage('granted', s) : resultMessage(result, s),
               ),
             ),
           ),
@@ -588,7 +595,9 @@ class _PermissionGuideState extends State<PermissionGuide>
   Widget summary(List<SetupStep> list, Map policy, int ready) => frame(
     [
       Icon(
-        ready == list.length ? Icons.celebration_outlined : Icons.fact_check_outlined,
+        ready == list.length
+            ? Icons.celebration_outlined
+            : Icons.fact_check_outlined,
         size: 60,
         color: const Color(0xff137c84),
       ),
@@ -633,7 +642,11 @@ class _PermissionGuideState extends State<PermissionGuide>
 }
 
 class _Section extends StatelessWidget {
-  const _Section({required this.title, required this.items, required this.icon});
+  const _Section({
+    required this.title,
+    required this.items,
+    required this.icon,
+  });
   final String title;
   final List<String> items;
   final IconData icon;

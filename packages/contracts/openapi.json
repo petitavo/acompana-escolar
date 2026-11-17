@@ -6264,13 +6264,19 @@
           "invitation": {
             "type": "string",
             "maxLength": 200,
-            "minLength": 16,
+            "minLength": 8,
             "title": "Invitation"
           },
           "verification_code": {
-            "type": "string",
-            "maxLength": 30,
-            "minLength": 6,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Verification Code"
           },
           "device": {
@@ -6281,7 +6287,6 @@
         "type": "object",
         "required": [
           "invitation",
-          "verification_code",
           "device"
         ],
         "title": "VerifyEnrollment"

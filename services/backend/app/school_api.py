@@ -6,7 +6,7 @@ import secrets
 from datetime import timedelta, datetime, time
 from uuid import UUID
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select, func, update, or_, delete
 from .db import *
@@ -145,10 +145,25 @@ def create_classroom(body: ClassroomInput, actor=Depends(identity), db=Depends(d
     return public(c)
 
 
+# Código de acceso del estudiante: 8 caracteres sin letras/números que se confundan
+# (0/O, 1/I/L). 31^8 ≈ 8.5e11 combinaciones; un solo uso, vence en 7 días y /enroll
+# limita los intentos fallidos.
+ACCESS_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def access_code():
+    raw = "".join(secrets.choice(ACCESS_ALPHABET) for _ in range(8))
+    return raw[:4] + "-" + raw[4:]
+
+
+def normalize_access(value):
+    return "".join(c for c in value.upper() if c.isalnum())
+
+
 def make_link(db, p, purpose, version, channel=""):
-    token = secrets.token_urlsafe(32)
+    token = access_code() if purpose == "student" else secrets.token_urlsafe(32)
     code = str(secrets.randbelow(90000000) + 10000000)
-    link = AccessLink(participant_id=p.participant_id, token_hash=digest(token), purpose=purpose, expires_at=now() + timedelta(days=7), detail={"code_hash": digest(code), "version": version, "channel": channel, "delivery": "operator_pending", "failed_attempts": 0})
+    link = AccessLink(participant_id=p.participant_id, token_hash=digest(normalize_access(token) if purpose == "student" else token), purpose=purpose, expires_at=now() + timedelta(days=7), detail={"code_hash": digest(code), "version": version, "channel": channel, "delivery": "operator_pending", "failed_attempts": 0})
     db.add(link)
     db.flush()
     return {"id": link.id, "token": token, "verification_code": code, "expires_at": link.expires_at.isoformat(), "delivery": "Pendiente de entrega individual por el operador; código por canal separado"}
@@ -286,9 +301,36 @@ def guardian_withdraw(body: dict[str, str], db=Depends(database)):
     return {"withdrawn": True}
 
 
+ENROLL_FAILURES = 20
+
+
 @router.post("/enroll")
-def enroll_student(body: VerifyEnrollment, db=Depends(database)):
-    link = checked_link(db, body.invitation, "student", body.verification_code)
+def enroll_student(body: VerifyEnrollment, request: Request, db=Depends(database)):
+    short = normalize_access(body.invitation)
+    if len(short) == 8 and not body.verification_code:
+        # Un solo código: se limita el número de intentos fallidos por origen.
+        from .db import LoginAttempt
+        key = digest("enroll:" + (request.client.host if request.client else "unknown"))
+        attempt = db.get(LoginAttempt, key)
+        if attempt and utc(attempt.until) > now() and attempt.count >= ENROLL_FAILURES:
+            raise HTTPException(429, "Demasiados intentos. Espera 15 minutos")
+        try:
+            link = checked_link(db, short, "student")
+        except HTTPException:
+            if not attempt:
+                attempt = LoginAttempt(key=key, count=0, until=now() + timedelta(minutes=15))
+                db.add(attempt)
+            if utc(attempt.until) < now():
+                attempt.count, attempt.until = 0, now() + timedelta(minutes=15)
+            attempt.count += 1
+            db.commit()
+            raise HTTPException(401, "Código incorrecto, usado o vencido. Revísalo o pide uno nuevo al colegio")
+        method = "access_code"
+    else:
+        if not body.verification_code:
+            raise HTTPException(422, "Falta el código")
+        link = checked_link(db, short if len(short) == 8 else body.invitation, "student", body.verification_code)
+        method = "invitation_and_separate_code"
     p = profile(db, link.participant_id)
     if db.get(Participant, p.participant_id).status == "revoked":
         raise HTTPException(409, "Participación retirada")
@@ -299,7 +341,7 @@ def enroll_student(body: VerifyEnrollment, db=Depends(database)):
     token = secrets.token_urlsafe(48)
     db.add(Session(device_id=device.id, token_hash=digest(token), csrf="", expires_at=now() + timedelta(days=30)))
     version = settings(db.get(Institution, p.institution_id))["document_version"]
-    db.add(Authorization(participant_id=p.participant_id, kind="verification", version=version, actor_id=device.id, detail={"accepted": True, "method": "invitation_and_separate_code"}))
+    db.add(Authorization(participant_id=p.participant_id, kind="verification", version=version, actor_id=device.id, detail={"accepted": True, "method": method}))
     audit(db, device.id, "school.enrolled", p.participant_id)
     return {"token": token, "device_id": device.id, "mode": MODE, "pseudonym": db.get(Participant, p.participant_id).pseudonym, "name": p.display_name}
 

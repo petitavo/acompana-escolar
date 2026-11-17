@@ -88,7 +88,9 @@ const appointmentStates = {
 /// (https://colegio/app?inv=TOKEN). Devuelve servidor y token.
 ({String server, String token}) parseInvitation(String text, String server) {
   final value = text.trim();
-  final uri = Uri.tryParse(value);
+  // El mensaje del colegio puede traer texto alrededor: tomar solo el enlace.
+  final link = RegExp(r'https?://[^\s]+').firstMatch(value)?.group(0);
+  final uri = link == null ? null : Uri.tryParse(link);
   if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
     final token =
         uri.queryParameters['inv'] ??
@@ -123,8 +125,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   bool busy = false,
       accepted = false,
       refreshing = false,
-      preferencesDirty = false,
-      editServer = compiledServer.isEmpty;
+      preferencesDirty = false;
   String message = '';
   Timer? refreshTimer;
   bool startingSensors = false, formsLoaded = false, formsUnavailable = false;
@@ -463,6 +464,13 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       }
       final decisionState = status['decision_state'];
       await refresh();
+      if (method == 'schoolEnroll' && status['enrolled'] == true && mounted) {
+        // Recién vinculado: el siguiente paso es leer y aceptar, en Participación.
+        setState(() {
+          tab = home['authorization']?['student'] == true ? 0 : 3;
+          message = '';
+        });
+      }
       if (method == 'schoolParticipation' && mounted) {
         setState(
           () => message = decisionState == 'confirmed'
@@ -830,7 +838,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
 
   List<SetupStep> get steps_ => setupSteps(status, device);
   int get readySteps => steps_
-      .where((s) => stepState(s, status, device, home['policy'] ?? {}) == 'ready')
+      .where(
+        (s) => stepState(s, status, device, home['policy'] ?? {}) == 'ready',
+      )
       .length;
 
   Widget permissionCard() {
@@ -838,9 +848,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     final canEdit = status['policy_pending'] != true;
     final list = steps_;
     return card('Permisos de este teléfono', [
-      Text(
-        'Todos son opcionales. $readySteps de ${list.length} activos.',
-      ),
+      Text('Todos son opcionales. $readySteps de ${list.length} activos.'),
       if (!canEdit)
         const Padding(
           padding: EdgeInsets.only(top: 6),
@@ -851,7 +859,8 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
           builder: (context) {
             final state = stepState(s, status, device, p);
             final ready = state == 'ready';
-            final unsupported = s.kind == 'steps' && status['steps_supported'] == false;
+            final unsupported =
+                s.kind == 'steps' && status['steps_supported'] == false;
             return ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
@@ -982,7 +991,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         'answers': answers,
         if (isPhq) 'functioning': functioning,
         'applied_at': now.toIso8601String(),
-        'recall_start': now.subtract(Duration(days: recallDays)).toIso8601String(),
+        'recall_start': now
+            .subtract(Duration(days: recallDays))
+            .toIso8601String(),
         'recall_end': now.toIso8601String(),
       }),
     });
@@ -1021,82 +1032,89 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     final needsFunctioning = isPhq && answers.values.any((v) => v > 0);
     final complete =
         done == questions.length && (!needsFunctioning || functioning != null);
-    return card(isPhq ? 'Cómo te has sentido' : (form!['title'] ?? 'Pregunta breve'), [
-      Text(
-        form!['recall'] ??
-            form!['instructions'] ??
-            'Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?',
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      const SizedBox(height: 6),
-      const Text(
-        'No hay respuestas buenas ni malas. Solo el equipo de psicología verá lo que respondas.',
-      ),
-      const SizedBox(height: 10),
-      LinearProgressIndicator(value: questions.isEmpty ? 0 : done / questions.length),
-      Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text('$done de ${questions.length} respondidas'),
-      ),
-      for (final (i, q) in questions.indexed)
+    return card(
+      isPhq ? 'Cómo te has sentido' : (form!['title'] ?? 'Pregunta breve'),
+      [
+        Text(
+          form!['recall'] ??
+              form!['instructions'] ??
+              'Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?',
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          'No hay respuestas buenas ni malas. Solo el equipo de psicología verá lo que respondas.',
+        ),
+        const SizedBox(height: 10),
+        LinearProgressIndicator(
+          value: questions.isEmpty ? 0 : done / questions.length,
+        ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: RadioGroup<int>(
-            groupValue: answers[q['id']],
+          padding: const EdgeInsets.only(top: 4),
+          child: Text('$done de ${questions.length} respondidas'),
+        ),
+        for (final (i, q) in questions.indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: RadioGroup<int>(
+              groupValue: answers[q['id']],
+              onChanged: (v) {
+                if (busy) return;
+                setState(() => answers[q['id']] = v);
+                saveDraft();
+              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    questions.length > 1 ? '${i + 1}. ${q['text']}' : q['text'],
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  for (final o in optionsFor(q))
+                    RadioListTile<int>(
+                      contentPadding: EdgeInsets.zero,
+                      dense: true,
+                      value: o['value'],
+                      title: Text(o['label']),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        if (needsFunctioning) ...[
+          Text(
+            form!['functioning']['text'],
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          RadioGroup<int>(
+            groupValue: functioning,
             onChanged: (v) {
               if (busy) return;
-              setState(() => answers[q['id']] = v);
+              setState(() => functioning = v);
               saveDraft();
             },
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  questions.length > 1 ? '${i + 1}. ${q['text']}' : q['text'],
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                for (final o in optionsFor(q))
+                for (final o
+                    in (form!['functioning']['options'] as List)
+                        .asMap()
+                        .entries)
                   RadioListTile<int>(
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    value: o['value'],
-                    title: Text(o['label']),
+                    value: o.key,
+                    title: Text(o.value),
                   ),
               ],
             ),
           ),
+        ],
+        const Text(
+          'Tus respuestas se guardan cifradas en este teléfono mientras respondes. Solo se envían cuando tocas "Enviar respuesta".',
         ),
-      if (needsFunctioning) ...[
-        Text(
-          form!['functioning']['text'],
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        RadioGroup<int>(
-          groupValue: functioning,
-          onChanged: (v) {
-            if (busy) return;
-            setState(() => functioning = v);
-            saveDraft();
-          },
-          child: Column(
-            children: [
-              for (final o
-                  in (form!['functioning']['options'] as List).asMap().entries)
-                RadioListTile<int>(
-                  contentPadding: EdgeInsets.zero,
-                  dense: true,
-                  value: o.key,
-                  title: Text(o.value),
-                ),
-            ],
-          ),
-        ),
+        button('Enviar respuesta', complete ? submitForm : null),
       ],
-      const Text(
-        'Tus respuestas se guardan cifradas en este teléfono mientras respondes. Solo se envían cuando tocas "Enviar respuesta".',
-      ),
-      button('Enviar respuesta', complete ? submitForm : null),
-    ]);
+    );
   }
 
   Widget setupCard() {
@@ -1125,78 +1143,82 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     );
   }
 
-  Widget onboarding() => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      card('Un espacio para acompañarte', const [
-        Icon(Icons.favorite_border, size: 54, color: brandColor),
-        SizedBox(height: 14),
+  /// Código de acceso: 8 letras/números (se acepta con o sin guion, en minúsculas).
+  String get accessCode =>
+      invitation.text.toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]'), '');
+
+  bool get codeReady =>
+      accessCode.length == 8 &&
+      (compiledServer.isNotEmpty || server.text.trim().startsWith('https://'));
+
+  void enroll() {
+    if (!codeReady || busy) return;
+    action('schoolEnroll', {
+      'server': server.text.trim(),
+      'invitation': accessCode,
+      'code': '',
+    });
+  }
+
+  Widget onboarding() {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        const Icon(Icons.favorite_border, size: 56, color: brandColor),
+        const SizedBox(height: 12),
         Text(
-          'Responde cuestionarios cortos sobre cómo te sientes y pide hablar con el equipo de psicología de tu colegio cuando lo necesites. Tú decides qué información opcional compartir.',
-        ),
-      ]),
-      card('Ingresa con tu invitación', [
-        const Text(
-          'Tu colegio te entregó una invitación (un enlace o un texto largo) y, por separado, un código de 8 números.',
-        ),
-        const SizedBox(height: 14),
-        TextField(
-          controller: invitation,
-          autocorrect: false,
-          minLines: 1,
-          maxLines: 3,
-          decoration: const InputDecoration(
-            labelText: 'Invitación personal',
-            helperText: 'Puedes pegar el enlace completo.',
-          ),
-          onChanged: (v) {
-            final parsed = parseInvitation(v, server.text);
-            if (parsed.server != server.text && parsed.server.isNotEmpty) {
-              setState(() => server.text = parsed.server);
-            }
-          },
-        ),
-        const SizedBox(height: 16),
-        TextField(
-          controller: code,
-          keyboardType: TextInputType.number,
-          autocorrect: false,
-          decoration: const InputDecoration(
-            labelText: 'Código recibido por separado',
-          ),
+          'Hola',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall,
         ),
         const SizedBox(height: 8),
-        if (editServer)
-          Padding(
-            padding: const EdgeInsets.only(top: 8),
-            child: TextField(
-              controller: server,
-              keyboardType: TextInputType.url,
-              decoration: const InputDecoration(
-                labelText: 'Dirección HTTPS del colegio',
-                helperText: 'Se completa sola si pegas el enlace de invitación.',
-              ),
-            ),
-          )
-        else
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: () => setState(() => editServer = true),
-              child: const Text('Cambiar dirección del colegio'),
-            ),
+        const Text(
+          'Escribe el código que te dio tu colegio.',
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 24),
+        TextField(
+          key: const ValueKey('code-field'),
+          controller: invitation,
+          autocorrect: false,
+          enableSuggestions: false,
+          textAlign: TextAlign.center,
+          textCapitalization: TextCapitalization.characters,
+          maxLength: 9,
+          style: theme.textTheme.headlineMedium?.copyWith(letterSpacing: 4),
+          inputFormatters: [
+            FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9\- ]')),
+          ],
+          decoration: const InputDecoration(
+            hintText: 'ABCD-2345',
+            counterText: '',
           ),
-        button('Vincular mi teléfono', () {
-          final parsed = parseInvitation(invitation.text, server.text);
-          action('schoolEnroll', {
-            'server': parsed.server,
-            'invitation': parsed.token,
-            'code': code.text.trim(),
-          });
-        }),
-      ]),
-    ],
-  );
+          onChanged: (_) => setState(() => message = ''),
+          onSubmitted: (_) => enroll(),
+        ),
+        if (compiledServer.isEmpty) ...[
+          const SizedBox(height: 12),
+          TextField(
+            controller: server,
+            keyboardType: TextInputType.url,
+            decoration: const InputDecoration(
+              labelText: 'Dirección del colegio (https://…)',
+              helperText: 'Solo en versiones de prueba sin servidor fijo.',
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: busy || !codeReady ? null : enroll,
+          style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
+          child: const Text('Entrar'),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1206,11 +1228,12 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       appBar: AppBar(
         title: const Text('Acompaña Escolar'),
         actions: [
-          IconButton(
-            onPressed: busy ? null : () => action('schoolSync'),
-            tooltip: 'Sincronizar',
-            icon: const Icon(Icons.sync),
-          ),
+          if (enrolled)
+            IconButton(
+              onPressed: busy ? null : () => action('schoolSync'),
+              tooltip: 'Sincronizar',
+              icon: const Icon(Icons.sync),
+            ),
         ],
       ),
       bottomNavigationBar: enrolled
@@ -1367,10 +1390,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 const Text(
                   'Cuando pides que te contacten, el equipo lo ve en su bandeja y coordina contigo.',
                 ),
-                button(
-                  'Quiero que me contacten',
-                  requestSupport,
-                ),
+                button('Quiero que me contacten', requestSupport),
                 for (final r in requests['requests'] ?? [])
                   ListTile(
                     contentPadding: EdgeInsets.zero,
@@ -1378,7 +1398,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     title: Text(
                       'Solicitud del ${friendlyDate(r['created_at'], time: false)}',
                     ),
-                    subtitle: Text(requestStates[r['state']] ?? '${r['state']}'),
+                    subtitle: Text(
+                      requestStates[r['state']] ?? '${r['state']}',
+                    ),
                   ),
               ]),
               card('Mis citas', [
@@ -1463,7 +1485,8 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   Widget participationOptions(dynamic auth) => Column(
     children: [
       card('Tú decides', [
-        if (auth['ready'] != true && (home['purpose'] ?? '').toString().isNotEmpty)
+        if (auth['ready'] != true &&
+            (home['purpose'] ?? '').toString().isNotEmpty)
           Text(
             home['purpose'],
             style: const TextStyle(fontWeight: FontWeight.w600),
@@ -1517,39 +1540,6 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             subtitle:
                 'Necesita un sensor compatible; no mide toda tu actividad física.',
           ),
-          if (location) ...[
-            toggle(
-              'Enviar coordenadas al servidor',
-              raw,
-              (v) => setState(() => raw = v),
-              subtitle:
-                  'Opcional y poco común. Si lo dejas apagado, las coordenadas nunca salen de tu teléfono.',
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              child: Text(
-                '¿Estás en tu casa ahora? Puedes marcarla para calcular el tiempo que pasas en casa. Se guarda solo en tu teléfono.',
-              ),
-            ),
-            button(
-              'Marcar este lugar como mi casa',
-              () => action('schoolHomeZone', {'clear': false}),
-              secondary: true,
-            ),
-            if (home['has_home_zone'] == true || status['home_zone'] == true)
-              button(
-                'Borrar mi casa',
-                () => action('schoolHomeZone', {'clear': true}),
-                secondary: true,
-              ),
-          ],
-          toggle(
-            'Permitir uso en investigación',
-            research,
-            (v) => setState(() => research = v),
-            subtitle:
-                'Tus datos, sin tu nombre, pueden usarse para mejorar la app.',
-          ),
           toggle(
             'Recibir recordatorios',
             reminders,
@@ -1572,9 +1562,52 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     });
                   }
                 },
-                label: Text('Hora del recordatorio: ${reminder.format(context)}'),
+                label: Text(
+                  'Hora del recordatorio: ${reminder.format(context)}',
+                ),
               ),
             ),
+          ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            title: const Text('Más opciones'),
+            children: [
+              if (location) ...[
+                toggle(
+                  'Enviar coordenadas al servidor',
+                  raw,
+                  (v) => setState(() => raw = v),
+                  subtitle:
+                      'Opcional y poco común. Si lo dejas apagado, las coordenadas nunca salen de tu teléfono.',
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    '¿Estás en tu casa ahora? Puedes marcarla para calcular el tiempo que pasas en casa. Se guarda solo en tu teléfono.',
+                  ),
+                ),
+                button(
+                  'Marcar este lugar como mi casa',
+                  () => action('schoolHomeZone', {'clear': false}),
+                  secondary: true,
+                ),
+                if (home['has_home_zone'] == true ||
+                    status['home_zone'] == true)
+                  button(
+                    'Borrar mi casa',
+                    () => action('schoolHomeZone', {'clear': true}),
+                    secondary: true,
+                  ),
+              ],
+              toggle(
+                'Permitir uso en investigación',
+                research,
+                (v) => setState(() => research = v),
+                subtitle:
+                    'Tus datos, sin tu nombre, pueden usarse para mejorar la app.',
+              ),
+            ],
+          ),
         ],
         button(
           auth['minor'] == true && auth['guardian'] != true
@@ -1593,33 +1626,34 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
               : null,
         ),
       ]),
-      if (auth['student'] == true) card('Retirar mi participación', [
-        const Text(
-          'Se detiene la captura y se pide borrar tus datos. Si no hay internet, la captura se detiene igual y el retiro se envía después.',
-        ),
-        button('Retirarme', () async {
-          final yes = await showDialog<bool>(
-            context: context,
-            builder: (c) => AlertDialog(
-              title: const Text('¿Retirar tu participación?'),
-              content: const Text(
-                'Se pedirá borrar tus datos del sistema. Para volver necesitarás una invitación nueva.',
+      if (auth['student'] == true)
+        card('Retirar mi participación', [
+          const Text(
+            'Se detiene la captura y se pide borrar tus datos. Si no hay internet, la captura se detiene igual y el retiro se envía después.',
+          ),
+          button('Retirarme', () async {
+            final yes = await showDialog<bool>(
+              context: context,
+              builder: (c) => AlertDialog(
+                title: const Text('¿Retirar tu participación?'),
+                content: const Text(
+                  'Se pedirá borrar tus datos del sistema. Para volver necesitarás una invitación nueva.',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(c, false),
+                    child: const Text('Cancelar'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(c, true),
+                    child: const Text('Retirarme'),
+                  ),
+                ],
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(c, false),
-                  child: const Text('Cancelar'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(c, true),
-                  child: const Text('Retirarme'),
-                ),
-              ],
-            ),
-          );
-          if (yes == true) await decision('withdraw');
-        }, secondary: true),
-      ]),
+            );
+            if (yes == true) await decision('withdraw');
+          }, secondary: true),
+        ]),
     ],
   );
 }

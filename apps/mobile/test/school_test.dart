@@ -205,9 +205,9 @@ void main() {
       await t.binding.setSurfaceSize(const Size(390, 844));
       await t.pumpWidget(const SchoolApp());
       await t.pumpAndSettle();
-      expect(find.text('Ingresa con tu invitación'), findsOneWidget);
+      expect(find.text('Escribe el código que te dio tu colegio.'), findsOneWidget);
       expect(find.text('LAB · prueba interna con adultos'), findsNothing);
-      expect(find.text('Código recibido por separado'), findsOneWidget);
+      expect(find.byKey(const ValueKey('code-field')), findsOneWidget);
       await expectLater(
         find.byType(SchoolApp),
         matchesGoldenFile('goldens/product-onboarding.png'),
@@ -661,5 +661,30 @@ void main() {
     expect(calls.where((x) => x == 'schoolPermission').length, 1);
     expect(locationGranted, isTrue);
     expect(find.text('¡Listo! Este paso ya está activo.'), findsOneWidget);
+  });
+
+  testWidgets('a single access code links the phone', (t) async {
+    Map? enrollArgs;
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('pe.upc.acompana/collector'),
+      (call) async {
+        calls.add(call.method);
+        if (call.method == 'schoolEnroll') {
+          enrollArgs = Map.from(call.arguments);
+        }
+        return '{"enrolled":false}';
+      },
+    );
+    // Versión de prueba sin servidor fijo: además pide la dirección.
+    await t.enterText(find.byKey(const ValueKey('code-field')), 'abcd-2345');
+    await t.enterText(find.byType(TextField).last, 'https://colegio.example');
+    await t.pumpAndSettle();
+    await t.tap(find.text('Entrar'));
+    await t.pumpAndSettle();
+    expect(enrollArgs?['invitation'], 'ABCD2345');
+    expect(enrollArgs?['server'], 'https://colegio.example');
+    expect(enrollArgs?['code'], '');
   });
 }

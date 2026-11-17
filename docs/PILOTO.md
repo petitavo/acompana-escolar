@@ -18,7 +18,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 
 ## Flujo del estudiante (app)
 
-1. **Invitación.** El colegio crea al estudiante en el panel. El panel muestra un enlace (`https://servidor/app?inv=...`) y un código de 8 números aparte. El estudiante instala la app, pega el enlace y escribe el código. Si el enlace se abre en el navegador, aparece una página con estas mismas instrucciones.
+1. **Código de acceso.** El colegio crea al estudiante en el panel y le entrega un código de 8 caracteres (por ejemplo `ABCD-2345`). El estudiante instala la app y escribe solo ese código: el servidor ya va fijo dentro del APK. El código sirve una sola vez, vence en 7 días y el servidor limita los intentos fallidos.
 2. **Autorización.** Si es menor de edad, el apoderado autoriza primero desde su propio enlace. Luego el estudiante lee el documento de participación y marca qué quiere compartir: uso de pantalla, ubicación, pasos y recordatorios. Todo es opcional.
 3. **Guía de permisos (nueva).** Al aceptar, se abre sola una guía paso a paso ("Prepara tu teléfono"). Cada paso explica:
    - para qué sirve el permiso,
@@ -93,7 +93,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
    cd apps/mobile
    flutter build apk --release --dart-define=API_URL=https://SU-SERVIDOR
    ```
-   Con `API_URL` compilado, el estudiante no ve el campo de servidor.
+   Con `API_URL` compilado, el estudiante solo escribe su código. Firmar siempre con la misma clave (carpeta `firma`, fuera del repo) para poder instalar actualizaciones encima.
 2. Desplegar el backend y aplicar las migraciones (`alembic upgrade head`).
 3. En el panel, Configuración:
    - responsables y suplente;
@@ -101,7 +101,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
    - recursos de ayuda;
    - sección 5 del piloto (zona del colegio y preguntas breves).
 4. Probar en al menos un Xiaomi/Redmi, un Samsung y un Motorola. En cada uno, pasar la guía completa, dejar el teléfono una noche y revisar al día siguiente que aparezcan pantalla, descanso y movilidad en el perfil.
-5. Crear las invitaciones y entregar el enlace y el código por canales distintos.
+5. Crear a los estudiantes y entregar a cada uno su código de acceso en privado.
 
 ## Limitaciones conocidas
 

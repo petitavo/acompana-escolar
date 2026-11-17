@@ -970,14 +970,16 @@ function InvitationResult({ value }: { value: R }) {
       <Tag tone="teal">Invitación preparada</Tag>
       <h3>{value.student.display_name}</h3>
       <p>
-        Entrega cada enlace a su destinatario y el código de verificación por un
-        canal separado. No se envió ningún mensaje externo.
+        Entrega este código solo al estudiante (en persona o por mensaje
+        privado). Lo escribe una vez en la app; vence en 7 días y sirve una sola
+        vez. No se envió ningún mensaje externo.
       </p>
       <label>
-        Enlace para el estudiante (se pega en la app)
-        <textarea
+        Código de acceso del estudiante
+        <input
           readOnly
-          value={location.origin + "/app?inv=" + invite.token}
+          value={invite.token}
+          style={{ fontSize: 28, letterSpacing: 4, textAlign: "center" }}
         />
       </label>
       <button
@@ -985,24 +987,14 @@ function InvitationResult({ value }: { value: R }) {
         className="p-secondary"
         onClick={() =>
           navigator.clipboard?.writeText(
-            "Hola. Este es tu enlace para Acompaña Escolar: " +
-              location.origin +
-              "/app?inv=" +
+            "Hola. Instala la app Acompaña Escolar y escribe este código: " +
               invite.token +
-              " . Instala la app, pega el enlace y escribe el código de 8 números que te daremos aparte.",
+              " (es personal, no lo compartas).",
           )
         }
       >
         Copiar mensaje para el estudiante
       </button>
-      <details>
-        <summary>Ver solo la invitación</summary>
-        <textarea readOnly value={invite.token} />
-      </details>
-      <label>
-        Código del estudiante
-        <input readOnly value={invite.verification_code} />
-      </label>
       {guardian && (
         <>
           <label>
@@ -4113,18 +4105,17 @@ function StudentPortal() {
             title="Qué bueno encontrarte aquí"
           />
           <section className="p-card">
-            <h2>Activa tu invitación</h2>
+            <h2>Entra con tu código</h2>
             <p>
-              Tu institución te entrega la invitación y un código individual.
-              Desde la web puedes responder y solicitar apoyo; la captura del
-              teléfono se configura en Android.
+              Escribe el código que te dio tu colegio. Desde la web puedes
+              responder y pedir apoyo; los sensores solo funcionan en la app
+              Android.
             </p>
             <Form
-              submit="Verificar y continuar"
+              submit="Entrar"
               task={(f) =>
                 api(S + "/enroll", "POST", {
                   invitation: f.get("invitation"),
-                  verification_code: f.get("verification_code"),
                   device: {
                     android_api: 29,
                     manufacturer: "Navegador",
@@ -4140,14 +4131,10 @@ function StudentPortal() {
               }}
             >
               <Input
-                label="Invitación individual"
+                label="Código de acceso"
                 name="invitation"
-                minLength={16}
-              />
-              <Input
-                label="Código de verificación"
-                name="verification_code"
-                minLength={6}
+                minLength={8}
+                placeholder="ABCD-2345"
                 autoComplete="one-time-code"
               />
             </Form>
