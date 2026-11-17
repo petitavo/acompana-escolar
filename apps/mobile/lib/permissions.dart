@@ -103,7 +103,7 @@ List<SetupStep> setupSteps(Map status, Map device) {
         'No vemos mensajes, fotos, llamadas ni lo que escribes.',
       ],
       how:
-          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás. Android muestra un aviso general que dice que la app podría ver qué apps usas: es el texto estándar de este permiso. Acompaña Escolar solo cuenta cuándo se enciende y se apaga la pantalla y no guarda nombres de apps.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
+          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás. Android muestra un aviso general que dice que la app podría ver qué apps usas: es el texto estándar de este permiso. Acompaña Escolar solo cuenta cuándo se enciende y se apaga la pantalla y no guarda nombres de apps. Si aparece "Configuración restringida" o "Se le negó el acceso": cierra ese aviso, ve a Ajustes → Aplicaciones → Acompaña Escolar, toca ⋮ (arriba a la derecha) → "Permitir configuración restringida" y vuelve a intentar. Pasa solo cuando la app se instaló fuera de Play Store.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
     ),
     const SetupStep(
       kind: 'location',
@@ -581,6 +581,15 @@ class _PermissionGuideState extends State<PermissionGuide>
                     if (mounted) go(index + 2);
                   },
             child: const Text('Ya lo activé'),
+          ),
+        ],
+        if (s.kind == 'usage' && !ready && results.containsKey('usage')) ...[
+          const SizedBox(height: 8),
+          // Android 13+ bloquea este permiso en apps instaladas fuera de Play Store
+          // hasta "Permitir configuración restringida" en la info de la app.
+          OutlinedButton(
+            onPressed: busy ? null : () => run(s, settings: true),
+            child: const Text('¿Android lo bloqueó? Abrir info de la app'),
           ),
         ],
         if (!ready)

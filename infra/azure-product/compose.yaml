@@ -4,7 +4,8 @@ x-backend: &backend
   APP_MODE: REAL
   DATABASE_URL: postgresql+psycopg://acompana:${POSTGRES_PASSWORD:?}@db:5432/acompana
   COOKIE_SECURE: 'true'
-  PILOT_ENABLED: 'false'
+  # Se abre poniendo PILOT_ENABLED=true en .runtime/azure-product.env (solo cuentas de prueba si no).
+  PILOT_ENABLED: ${PILOT_ENABLED:-false}
   ALLOW_EXTERNAL_NOTIFICATIONS: 'false'
   ARTIFACT_DIR: /workspace/.runtime/artifacts
 
