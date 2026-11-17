@@ -96,8 +96,13 @@ class SchoolCollector(private val context:Context) {
         }
         if(!p.optBoolean("raw_location_upload"))dao.cancelKind("location")
         val id=queue("participation","/me/participation",body);vault.put("policy_pending","true")
-        try{sync()}catch(e:Exception){vault.put("sync_error","Tu decisión está guardada y pendiente de conexión")}
-        JSONObject(status()).put("decision_state",dao.packet(id)?.state?:if(action=="withdraw" && vault.get("token").isEmpty())"confirmed" else "unknown").toString()
+        // Solo la decisión y la autorización: así activar un permiso no espera a que se
+        // suban todos los datos pendientes. El resto se envía en segundo plano.
+        var finished=false
+        try{finished=vault.get("token").isEmpty() || !syncPolicies()}catch(e:Exception){vault.put("sync_error","Tu decisión está guardada y pendiente de conexión")}
+        val state=dao.packet(id)?.state?:if(action=="withdraw" && vault.get("token").isEmpty())"confirmed" else "unknown"
+        if(!finished)Thread{try{sync()}catch(_:Exception){}}.start()
+        JSONObject(status()).put("decision_state",state).toString()
     }
     fun forms()=if(dao.pending("school_form").isNotEmpty())"[]" else cached("/me/questionnaires","school_forms","[]")
     fun history()=cached("/me/questionnaires/history","school_history","[]")
@@ -173,17 +178,22 @@ class SchoolCollector(private val context:Context) {
         if(vault.get("raw_location_upload")=="true")request("/me/home-zone","PUT",h.toString())
         vault.put("home_zone",h.toString());return status()
     }
-    fun sync():String=synchronized(Collector.mutex){
-        if(vault.get("token").isEmpty())return@synchronized status()
+    /** Envía las decisiones de participación pendientes y recarga Inicio. Devuelve false si el alumno se retiró. */
+    private fun syncPolicies():Boolean=synchronized(Collector.mutex){
         for(p in dao.policies()){
             try{
                 transport.request(p.path,"POST",p.body,p.id);dao.confirm(listOf(p.id))
                 if(JSONObject(p.body).optString("action") in listOf("resume","assent","consent"))vault.put("local_pause","false")
             }
             catch(e:ApiFailure){if(e.status in listOf(400,401,403,409,422)){dao.reject(p.id,"http_${e.status}");vault.put("active","false");stopSensors();continue} else throw e}
-            if(JSONObject(p.body).optString("action")=="withdraw"){dao.clear();vault.put("active","false");stopSensors();vault.clearParticipation();WorkManager.getInstance(context).cancelUniqueWork("school-sync");return@synchronized status()}
+            if(JSONObject(p.body).optString("action")=="withdraw"){dao.clear();vault.put("active","false");stopSensors();vault.clearParticipation();WorkManager.getInstance(context).cancelUniqueWork("school-sync");return@synchronized false}
         }
         home()
+        true
+    }
+    fun sync():String=synchronized(Collector.mutex){
+        if(vault.get("token").isEmpty())return@synchronized status()
+        if(!syncPolicies())return@synchronized status()
         SchoolPush.configure(context)
         val pendingToken=vault.get("pending_push_token")
         if(pendingToken.isNotEmpty())try{

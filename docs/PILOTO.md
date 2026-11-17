@@ -1,4 +1,4 @@
-# Cómo funciona Acompaña Escolar (versión 0.4.0, piloto)
+# Cómo funciona Acompaña Escolar (versión 0.4.3, piloto)
 
 Este documento resume qué hace la aplicación, cómo funciona cada parte y qué hay que hacer para el piloto con unos 30 estudiantes.
 
@@ -20,7 +20,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 
 1. **Código de acceso.** El colegio crea al estudiante en el panel y le entrega un código de 8 caracteres (por ejemplo `ABCD-2345`). El estudiante instala la app y escribe solo ese código: el servidor ya va fijo dentro del APK. El código sirve una sola vez, vence en 7 días y el servidor limita los intentos fallidos.
 2. **Autorización.** Si es menor de edad, el apoderado autoriza primero desde su propio enlace. Luego el estudiante lee el documento de participación y marca qué quiere compartir: uso de pantalla, ubicación, pasos y recordatorios. Todo es opcional.
-3. **Guía de permisos (nueva).** Al aceptar, se abre sola una guía paso a paso ("Prepara tu teléfono"). Cada paso explica:
+3. **Guía de permisos (nueva).** Al aceptar, el alumno vuelve a Inicio y el paso 2, "Prepara tu teléfono", queda marcado. La guía no se abre sola: se abre cuando el alumno toca el botón. Cada paso explica antes de tocar nada qué ventana de Android va a aparecer y qué elegir, y además:
    - para qué sirve el permiso,
    - lo que **no** vemos (mensajes, fotos, apps usadas, lo que escribe),
    - cómo activarlo en su marca de teléfono (Xiaomi, Samsung, Huawei, Honor, OPPO, realme, OnePlus, vivo o Motorola).
@@ -30,7 +30,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
    Si Android ya no muestra la ventana del permiso (el estudiante tocó "No volver a preguntar"), la guía lo detecta y ofrece "Abrir ajustes". Si solo dio ubicación aproximada, la guía pide la precisa, porque la asistencia la necesita.
 
    Siempre hay "Ahora no". La guía se puede volver a abrir desde Inicio o desde Participación, y al regresar de Ajustes revisa sola qué quedó activo.
-4. **Inicio.** Muestra si hay un cuestionario pendiente, la tarjeta "Prepara tu teléfono" (cuántos pasos faltan), el botón "Quiero que me contacten" y el horario de atención del equipo.
+4. **Inicio.** Una cabecera de color con el nombre del alumno y "Tu camino": tres pasos numerados (aceptar participar, preparar el teléfono, responder el cuestionario). El paso que toca ahora se marca con "Ahora" y tiene su botón. Debajo están "Quiero que me contacten" y el horario del equipo. Los avisos (verde = listo, ámbar = falta algo o no hay conexión, rojo = no se pudo) quedan fijos arriba y se cierran con una X.
 5. **Cuestionarios.** El PHQ-9 aparece cada 14 días o más (según configure el colegio). Si el equipo los activa, también aparecen:
    - el PHQ-2 (preguntas 1 y 2 del PHQ-9), solo en la semana intermedia entre dos PHQ-9, para no repetir preguntas recién respondidas,
    - una pregunta diaria de contacto social,

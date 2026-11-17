@@ -205,7 +205,10 @@ void main() {
       await t.binding.setSurfaceSize(const Size(390, 844));
       await t.pumpWidget(const SchoolApp());
       await t.pumpAndSettle();
-      expect(find.text('Escribe el código que te dio tu colegio.'), findsOneWidget);
+      expect(
+        find.text('Escribe el código que te dio tu colegio.'),
+        findsOneWidget,
+      );
       expect(find.text('LAB · prueba interna con adultos'), findsNothing);
       expect(find.byKey(const ValueKey('code-field')), findsOneWidget);
       await expectLater(
@@ -222,11 +225,14 @@ void main() {
     await t.binding.setSurfaceSize(const Size(390, 844));
     await t.pumpWidget(const SchoolApp());
     await t.pumpAndSettle();
-    expect(find.text('Hola, Ana Ficticia'), findsOneWidget);
+    expect(find.text('¡Hola, Ana!'), findsOneWidget);
+    expect(find.text('Tu camino'), findsOneWidget);
     await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-home.png'),
     );
+    await t.ensureVisible(find.text('Quiero que me contacten'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Quiero que me contacten'));
     await t.pumpAndSettle();
     // Primero confirma, para no enviar pedidos por un toque accidental.
@@ -235,7 +241,7 @@ void main() {
     await t.pumpAndSettle();
     expect(calls, contains('schoolSupport'));
     expect(
-      find.textContaining('el equipo todavía no los recibió'),
+      find.textContaining('Se enviará solo cuando haya internet'),
       findsOneWidget,
     );
     await t.binding.setSurfaceSize(null);
@@ -432,10 +438,16 @@ void main() {
     );
     await t.tap(find.text('Aceptar y continuar'));
     await t.pumpAndSettle();
-    // Tras aceptar, la guía de permisos se abre sola y no pide nada sin un toque.
-    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
+    // Tras aceptar vuelve a Inicio: el paso 2 (preparar el teléfono) queda marcado
+    // y nada se abre solo.
+    expect(find.text('Tu camino'), findsOneWidget);
+    expect(find.textContaining('Sigue con el paso 2'), findsOneWidget);
+    expect(find.text('Vamos a preparar tu teléfono'), findsNothing);
     expect(calls, isNot(contains('schoolPermission')));
-    // Y desde esa guía sí se puede pedir un permiso (antes quedaba bloqueada).
+    // Desde Inicio se abre la guía y se puede pedir un permiso.
+    await t.tap(find.text('Empezar (3 min)'));
+    await t.pumpAndSettle();
+    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
     await t.tap(find.text('Empezar'));
     await t.pumpAndSettle();
     await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
@@ -444,7 +456,7 @@ void main() {
     calls.removeWhere((x) => x == 'schoolPermission');
     await t.pageBack();
     await t.pumpAndSettle();
-    expect(find.text('Permisos de este teléfono'), findsOneWidget);
+    expect(find.text('Tu camino'), findsOneWidget);
     expect(find.text('Aceptar y continuar'), findsNothing);
     expect(calls.where((x) => x == 'schoolParticipation').length, 1);
     expect(calls, isNot(contains('schoolStartSensors')));

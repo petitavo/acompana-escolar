@@ -103,7 +103,7 @@ List<SetupStep> setupSteps(Map status, Map device) {
         'No vemos mensajes, fotos, llamadas ni lo que escribes.',
       ],
       how:
-          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás. Android muestra un aviso general que dice que la app podría ver qué apps usas: es el texto estándar de este permiso. Acompaña Escolar solo cuenta cuándo se enciende y se apaga la pantalla y no guarda nombres de apps. Si aparece "Configuración restringida" o "Se le negó el acceso": cierra ese aviso, ve a Ajustes → Aplicaciones → Acompaña Escolar, toca ⋮ (arriba a la derecha) → "Permitir configuración restringida" y vuelve a intentar. Pasa solo cuando la app se instaló fuera de Play Store.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
+          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás. Android muestra un aviso general que dice que la app "podría ver qué apps usas": es el texto estándar de este permiso; nosotros no guardamos nombres de apps.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
     ),
     const SetupStep(
       kind: 'location',
@@ -217,6 +217,27 @@ String stepState(SetupStep s, Map status, Map device, Map policy) {
   return granted ? 'ready' : 'pending';
 }
 
+/// Android 13+ bloquea "Acceso al uso" en apps instaladas fuera de Play Store.
+const restrictedHelp = [
+  'Cierra ese aviso.',
+  'Toca "Abrir info de la app" (abajo).',
+  'Toca ⋮ (arriba a la derecha) y luego "Permitir configuración restringida".',
+  'Vuelve aquí y toca "Permitir" otra vez.',
+];
+
+/// Colores de cada paso: dan identidad a la guía sin depender del texto.
+const stepColors = {
+  'notifications': Color(0xffff7a59),
+  'usage': Color(0xff7c6cf2),
+  'location': Color(0xff0e9f8f),
+  'background': Color(0xff0b7a8f),
+  'steps': Color(0xfff59e0b),
+  'battery': Color(0xff22a35a),
+  'autostart': Color(0xffe2557a),
+};
+
+Color colorOf(String kind) => stepColors[kind] ?? const Color(0xff0e7c7b);
+
 const stateLabels = {
   'ready': 'Activo',
   'pending': 'Falta activar',
@@ -225,10 +246,10 @@ const stateLabels = {
 };
 
 Color stateColor(BuildContext context, String state) => switch (state) {
-  'ready' => const Color(0xff0f766e),
+  'ready' => const Color(0xff15803d),
   'approximate' => const Color(0xffb45309),
-  'pending' => Theme.of(context).colorScheme.primary,
-  _ => Colors.blueGrey,
+  'pending' => const Color(0xffe0603e),
+  _ => const Color(0xff64748b),
 };
 
 /// Mensaje claro para cada resultado devuelto por Android.
@@ -245,7 +266,9 @@ String resultMessage(String? state, SetupStep step) => switch (state) {
   'settings_opened' =>
     'Haz el cambio en Ajustes y vuelve con la flecha de atrás. Revisamos el resultado automáticamente.',
   'offline' =>
-    'Tu elección se guardó, pero falta internet para confirmarla. Vuelve a tocar el botón cuando tengas conexión.',
+    'No hay conexión con el colegio en este momento. Revisa tu internet y vuelve a tocar el botón.',
+  'rejected' =>
+    'No se pudo guardar tu elección. Abre la pestaña Participación y revisa tu autorización.',
   'unavailable' =>
     'Este teléfono no tiene ese ajuste. Puedes continuar con el siguiente paso.',
   _ => '',
@@ -386,14 +409,26 @@ class _PermissionGuideState extends State<PermissionGuide>
     final readyCount = list
         .where((s) => stepState(s, status, device, policy) == 'ready')
         .length;
+    final current = page > 0 && page <= list.length ? list[page - 1] : null;
+    final accent = current == null
+        ? Theme.of(context).colorScheme.primary
+        : colorOf(current.kind);
     return Scaffold(
       appBar: AppBar(
         title: const Text('Prepara tu teléfono'),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: LinearProgressIndicator(
-            value: (page + 1) / total,
-            minHeight: 4,
+          preferredSize: const Size.fromHeight(6),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 22),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: (page + 1) / total,
+                minHeight: 6,
+                color: accent,
+                backgroundColor: accent.withValues(alpha: 0.15),
+              ),
+            ),
           ),
         ),
       ),
@@ -418,7 +453,7 @@ class _PermissionGuideState extends State<PermissionGuide>
       children: [
         Expanded(
           child: ListView(
-            padding: const EdgeInsets.fromLTRB(22, 22, 22, 8),
+            padding: const EdgeInsets.fromLTRB(22, 18, 22, 8),
             children: children,
           ),
         ),
@@ -433,38 +468,56 @@ class _PermissionGuideState extends State<PermissionGuide>
     ),
   );
 
+  /// Ilustración simple: el icono del paso dentro de círculos de su color.
+  Widget badge(IconData icon, Color color, {double size = 112}) => Center(
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: color.withValues(alpha: 0.12),
+      ),
+      child: Center(
+        child: Container(
+          width: size * 0.66,
+          height: size * 0.66,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+          child: Icon(icon, color: Colors.white, size: size * 0.34),
+        ),
+      ),
+    ),
+  );
+
   Widget intro(int count) => frame(
     [
-      const Icon(
-        Icons.verified_user_outlined,
-        size: 64,
-        color: Color(0xff137c84),
-      ),
-      const SizedBox(height: 16),
+      badge(Icons.phone_android, Theme.of(context).colorScheme.primary),
+      const SizedBox(height: 18),
       Text(
         'Vamos a preparar tu teléfono',
-        style: Theme.of(context).textTheme.headlineSmall,
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         textAlign: TextAlign.center,
       ),
-      const SizedBox(height: 14),
-      Text(
-        'Son unos pocos pasos cortos (unos 3 minutos). En cada uno te explicamos para qué sirve y qué NO vemos.',
-        textAlign: TextAlign.center,
+      const SizedBox(height: 10),
+      Text('$count pasos cortos, unos 3 minutos.', textAlign: TextAlign.center),
+      const SizedBox(height: 20),
+      const _Tile(
+        color: Color(0xff0e9f8f),
+        icon: Icons.touch_app_outlined,
+        text:
+            'Antes de cada ventana de Android te decimos qué va a aparecer y qué tocar.',
       ),
-      const SizedBox(height: 18),
-      const _Bullet(
-        icon: Icons.toggle_on_outlined,
-        text: 'Todo es opcional. Puedes saltar cualquier paso con "Ahora no".',
-      ),
-      const _Bullet(
+      const _Tile(
+        color: Color(0xff7c6cf2),
         icon: Icons.lock_outline,
         text:
-            'Nunca leemos mensajes, fotos, llamadas ni lo que escribes. No vemos qué apps usas.',
+            'Nunca vemos mensajes, fotos, llamadas, lo que escribes ni qué apps usas.',
       ),
-      const _Bullet(
-        icon: Icons.pause_circle_outline,
-        text:
-            'Puedes pausar o cambiar lo que compartes cuando quieras, en la pestaña Participación.',
+      const _Tile(
+        color: Color(0xffff7a59),
+        icon: Icons.toggle_on_outlined,
+        text: 'Todo es opcional. Puedes saltar un paso con "Ahora no".',
       ),
     ],
     [FilledButton(onPressed: () => go(1), child: const Text('Empezar'))],
@@ -476,6 +529,7 @@ class _PermissionGuideState extends State<PermissionGuide>
     final ready = state == 'ready';
     final blocked = result == 'blocked';
     final theme = Theme.of(context);
+    final color = colorOf(s.kind);
     String primaryLabel;
     VoidCallback? primary;
     if (ready) {
@@ -500,67 +554,101 @@ class _PermissionGuideState extends State<PermissionGuide>
       primaryLabel = 'Permitir';
       primary = () => run(s);
     }
+    final failed = result != null && result != 'granted' && !ready;
     return frame(
       [
         Text(
           'Paso ${index + 1} de $count',
+          textAlign: TextAlign.center,
           style: theme.textTheme.labelLarge?.copyWith(
-            color: theme.colorScheme.primary,
+            color: color,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        const SizedBox(height: 10),
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 26,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(s.icon, color: theme.colorScheme.onPrimaryContainer),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(s.title, style: theme.textTheme.headlineSmall),
-            ),
-          ],
+        const SizedBox(height: 12),
+        badge(
+          ready ? Icons.check : s.icon,
+          ready ? stateColor(context, 'ready') : color,
         ),
-        const SizedBox(height: 10),
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Chip(
-            label: Text(stateLabels[state] ?? state),
-            labelStyle: TextStyle(color: stateColor(context, state)),
-            side: BorderSide(color: stateColor(context, state)),
-            avatar: Icon(
-              ready ? Icons.check_circle : Icons.radio_button_unchecked,
-              size: 18,
-              color: stateColor(context, state),
+        const SizedBox(height: 14),
+        Text(
+          s.title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: stateColor(context, state).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              stateLabels[state] ?? state,
+              style: TextStyle(
+                color: stateColor(context, state),
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
-        const SizedBox(height: 10),
-        _Section(title: 'Para qué sirve', items: s.why, icon: Icons.check),
-        _Section(title: 'Lo que NO vemos', items: s.notSeen, icon: Icons.block),
-        if (!ready)
-          _Section(
-            title: 'Cómo hacerlo',
-            items: [s.how],
+        const SizedBox(height: 16),
+        if (ready || result == 'granted')
+          _Notice(
+            color: stateColor(context, 'ready'),
+            icon: Icons.check_circle,
+            text: resultMessage('granted', s),
+          )
+        else ...[
+          if (failed)
+            _Notice(
+              color: const Color(0xffd97706),
+              icon: Icons.info_outline,
+              text: resultMessage(result, s),
+            ),
+          _Box(
+            color: color,
             icon: Icons.touch_app_outlined,
+            title: 'Qué va a pasar',
+            items: [s.how],
           ),
-        if (result != null && result != 'granted' ||
-            ready && result == 'granted')
-          Semantics(
-            liveRegion: true,
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: ready
-                    ? const Color(0xffe6f4f1)
-                    : const Color(0xfffff4e5),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                ready ? resultMessage('granted', s) : resultMessage(result, s),
-              ),
+        ],
+        _Box(
+          color: const Color(0xff0e7c7b),
+          icon: Icons.check,
+          title: 'Para qué sirve',
+          items: s.why,
+        ),
+        _Box(
+          color: const Color(0xff64748b),
+          icon: Icons.visibility_off_outlined,
+          title: 'Lo que NO vemos',
+          items: s.notSeen,
+        ),
+        if (s.kind == 'usage' && !ready)
+          Card(
+            margin: const EdgeInsets.only(top: 6),
+            child: ExpansionTile(
+              shape: const Border(),
+              leading: const Icon(Icons.help_outline),
+              title: const Text('¿Te salió "Configuración restringida"?'),
+              childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              children: [
+                for (var i = 0; i < restrictedHelp.length; i++)
+                  _Bullet(
+                    icon: Icons.circle,
+                    text: '${i + 1}. ${restrictedHelp[i]}',
+                    color: color,
+                  ),
+                const SizedBox(height: 6),
+                OutlinedButton(
+                  onPressed: busy ? null : () => run(s, settings: true),
+                  child: const Text('Abrir info de la app'),
+                ),
+              ],
             ),
           ),
       ],
@@ -568,7 +656,21 @@ class _PermissionGuideState extends State<PermissionGuide>
         FilledButton(
           key: ValueKey('guide-$primaryLabel'),
           onPressed: busy ? null : primary,
-          child: Text(primaryLabel),
+          style: FilledButton.styleFrom(backgroundColor: ready ? null : color),
+          child: busy
+              ? const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Un momento…'),
+                  ],
+                )
+              : Text(primaryLabel),
         ),
         if (s.kind == 'autostart' && !ready) ...[
           const SizedBox(height: 8),
@@ -583,15 +685,6 @@ class _PermissionGuideState extends State<PermissionGuide>
             child: const Text('Ya lo activé'),
           ),
         ],
-        if (s.kind == 'usage' && !ready && results.containsKey('usage')) ...[
-          const SizedBox(height: 8),
-          // Android 13+ bloquea este permiso en apps instaladas fuera de Play Store
-          // hasta "Permitir configuración restringida" en la info de la app.
-          OutlinedButton(
-            onPressed: busy ? null : () => run(s, settings: true),
-            child: const Text('¿Android lo bloqueó? Abrir info de la app'),
-          ),
-        ],
         if (!ready)
           TextButton(
             onPressed: busy ? null : () => go(index + 2),
@@ -603,22 +696,23 @@ class _PermissionGuideState extends State<PermissionGuide>
 
   Widget summary(List<SetupStep> list, Map policy, int ready) => frame(
     [
-      Icon(
+      badge(
+        ready == list.length ? Icons.celebration : Icons.fact_check_outlined,
         ready == list.length
-            ? Icons.celebration_outlined
-            : Icons.fact_check_outlined,
-        size: 60,
-        color: const Color(0xff137c84),
+            ? stateColor(context, 'ready')
+            : Theme.of(context).colorScheme.primary,
       ),
-      const SizedBox(height: 12),
+      const SizedBox(height: 14),
       Text(
-        ready == list.length ? '¡Tu teléfono está listo!' : 'Resumen',
-        style: Theme.of(context).textTheme.headlineSmall,
+        ready == list.length ? '¡Tu teléfono está listo!' : 'Así quedó',
+        style: Theme.of(
+          context,
+        ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 8),
       Text(
-        '$ready de ${list.length} pasos activos. Puedes volver a esta guía desde Inicio o Participación.',
+        '$ready de ${list.length} pasos activos. Puedes volver a esta guía cuando quieras desde Inicio.',
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 12),
@@ -626,17 +720,29 @@ class _PermissionGuideState extends State<PermissionGuide>
         Builder(
           builder: (context) {
             final state = stepState(list[i], status, device, policy);
-            return ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(list[i].icon, color: stateColor(context, state)),
-              title: Text(list[i].title),
-              subtitle: Text(stateLabels[state] ?? state),
-              trailing: state == 'ready'
-                  ? Icon(Icons.check_circle, color: stateColor(context, state))
-                  : TextButton(
-                      onPressed: () => go(i + 1),
-                      child: const Text('Activar'),
-                    ),
+            final c = colorOf(list[i].kind);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 8),
+              child: ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: c.withValues(alpha: 0.15),
+                  child: Icon(list[i].icon, color: c),
+                ),
+                title: Text(list[i].title),
+                subtitle: Text(
+                  stateLabels[state] ?? state,
+                  style: TextStyle(color: stateColor(context, state)),
+                ),
+                trailing: state == 'ready'
+                    ? Icon(
+                        Icons.check_circle,
+                        color: stateColor(context, state),
+                      )
+                    : TextButton(
+                        onPressed: () => go(i + 1),
+                        child: const Text('Activar'),
+                      ),
+              ),
             );
           },
         ),
@@ -650,40 +756,117 @@ class _PermissionGuideState extends State<PermissionGuide>
   );
 }
 
-class _Section extends StatelessWidget {
-  const _Section({
+/// Recuadro de color con título e ítems (qué va a pasar, para qué sirve…).
+class _Box extends StatelessWidget {
+  const _Box({
+    required this.color,
+    required this.icon,
     required this.title,
     required this.items,
-    required this.icon,
   });
+  final Color color;
+  final IconData icon;
   final String title;
   final List<String> items;
-  final IconData icon;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 12),
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(16),
+    ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 6),
-        for (final item in items) _Bullet(icon: icon, text: item),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            color: color,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 4),
+        for (final item in items) _Bullet(icon: icon, text: item, color: color),
+      ],
+    ),
+  );
+}
+
+class _Notice extends StatelessWidget {
+  const _Notice({required this.color, required this.icon, required this.text});
+  final Color color;
+  final IconData icon;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Semantics(
+    liveRegion: true,
+    child: Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: 10),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    ),
+  );
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({required this.color, required this.icon, required this.text});
+  final Color color;
+  final IconData icon;
+  final String text;
+  @override
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.only(bottom: 10),
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: color.withValues(alpha: 0.09),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      children: [
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text)),
       ],
     ),
   );
 }
 
 class _Bullet extends StatelessWidget {
-  const _Bullet({required this.icon, required this.text});
+  const _Bullet({required this.icon, required this.text, this.color});
   final IconData icon;
   final String text;
+  final Color? color;
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 4),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+        Padding(
+          padding: const EdgeInsets.only(top: 2),
+          child: Icon(
+            icon,
+            size: icon == Icons.circle ? 8 : 18,
+            color: color ?? Theme.of(context).colorScheme.primary,
+          ),
+        ),
         const SizedBox(width: 10),
         Expanded(child: Text(text)),
       ],
