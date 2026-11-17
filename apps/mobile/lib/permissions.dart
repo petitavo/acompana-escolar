@@ -247,7 +247,9 @@ String resultMessage(String? state, SetupStep step) => switch (state) {
     'Elegiste ubicación aproximada. Con ella no se pueden calcular recorridos. Toca "Usar ubicación precisa" y activa "Ubicación precisa".',
   'settings_opened' =>
     'Haz el cambio en Ajustes y vuelve con la flecha de atrás. Revisamos el resultado automáticamente.',
-  'unavailable' =>
+  'offline' =>
+    'Tu elección se guardó, pero falta internet para confirmarla. Vuelve a tocar el botón cuando tengas conexión.',
+    'unavailable' =>
     'Este teléfono no tiene ese ajuste. Puedes continuar con el siguiente paso.',
   _ => '',
 };
@@ -341,7 +343,14 @@ class _PermissionGuideState extends State<PermissionGuide>
     final total = steps.length + 2;
     final target = i.clamp(0, total - 1);
     setState(() => page = target);
-    if (!pages.hasClients) return;
+    if (!pages.hasClients) {
+      // La primera vez el PageView aún no existe (se construye al terminar la
+      // carga): saltar al paso pedido en el siguiente cuadro.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && pages.hasClients) pages.jumpToPage(target);
+      });
+      return;
+    }
     if (animate) {
       pages.animateToPage(
         target,

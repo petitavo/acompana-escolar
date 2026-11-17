@@ -472,11 +472,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
               : 'Tu decisión se guardó en el teléfono y se enviará al tener internet. Si pausaste o te retiraste, la captura ya se detuvo.',
         );
         if (scroll.hasClients) {
-          await scroll.animateTo(
-            0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
+          scrollTop();
         }
         // Después de aceptar por primera vez, la guía de permisos se abre sola
         // (más abajo, cuando busy ya es falso; si no, la guía no puede pedir nada).
@@ -677,11 +673,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => busy = false);
         if (scroll.hasClients) {
-          await scroll.animateTo(
-            0,
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeOut,
-          );
+          scrollTop();
         }
       }
     }
@@ -748,6 +740,22 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         ],
       ),
     );
+  }
+
+  /// Sube al inicio de la lista sin esperar la animación. Si hay otra pantalla
+  /// encima (la guía de permisos), Flutter congela las animaciones de esta y un
+  /// await quedaría colgado hasta salir de ella.
+  void scrollTop() {
+    if (!scroll.hasClients) return;
+    if (ModalRoute.of(context)?.isCurrent == false) {
+      scroll.jumpTo(0);
+    } else {
+      scroll.animateTo(
+        0,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOut,
+      );
+    }
   }
 
   Future<void> decision(String act) async {

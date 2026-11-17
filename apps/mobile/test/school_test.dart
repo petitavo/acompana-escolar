@@ -639,4 +639,27 @@ void main() {
     expect(phoneIn('Llama al 0800-10828 gratis'), '080010828');
     expect(phoneIn('Escríbenos por la web'), isNull);
   });
+
+  testWidgets('guide grants a not-yet-shared permission with a single tap', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    await t.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Ubicación'));
+    await t.pumpAndSettle();
+    expect(find.text('Prepara tu teléfono'), findsOneWidget);
+    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
+    await t.pumpAndSettle();
+    // Guarda la preferencia y pide el permiso en el mismo toque, con la guía encima.
+    expect(calls.where((x) => x == 'schoolParticipation').length, 1);
+    expect(calls.where((x) => x == 'schoolPermission').length, 1);
+    expect(locationGranted, isTrue);
+    expect(find.text('¡Listo! Este paso ya está activo.'), findsOneWidget);
+  });
 }
