@@ -16,7 +16,11 @@ import java.time.*
 import java.util.UUID
 import java.util.concurrent.Executors
 
-/** Explicitly started while Activity is visible. Never restarted by WorkManager or BOOT. */
+/**
+ * Se inicia con la app abierta. Si Android lo cierra (reinicio, limpieza del fabricante),
+ * DeviceSetup.restartIfNeeded lo vuelve a iniciar desde el arranque o desde el trabajo
+ * periódico solo cuando la participación sigue activa y hay permiso de segundo plano.
+ */
 class LocationService:Service(),SensorEventListener {
     companion object {
         @Volatile var running=false; private set

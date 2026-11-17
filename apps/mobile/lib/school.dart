@@ -3,6 +3,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'permissions.dart';
+
+const brandColor = Color(0xff137c84);
+
 class SchoolApp extends StatelessWidget {
   const SchoolApp({super.key});
   @override
@@ -11,17 +15,85 @@ class SchoolApp extends StatelessWidget {
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xff137c84)),
+      colorScheme: ColorScheme.fromSeed(seedColor: brandColor),
       scaffoldBackgroundColor: const Color(0xfff4f7fb),
+      cardTheme: CardThemeData(
+        color: Colors.white,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: Color(0xffdfe7ee)),
+        ),
+      ),
       inputDecorationTheme: const InputDecorationTheme(
         border: OutlineInputBorder(),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
       ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+      ),
     ),
     home: const SchoolHome(),
   );
+}
+
+/// Fecha legible en español a partir de ISO-8601 (sin depender de paquetes externos).
+String friendlyDate(dynamic value, {bool time = true}) {
+  if (value == null || value.toString().isEmpty) return 'Todavía no disponible';
+  final parsed = DateTime.tryParse(value.toString());
+  if (parsed == null) return value.toString();
+  final d = parsed.toLocal();
+  const months = [
+    'ene',
+    'feb',
+    'mar',
+    'abr',
+    'may',
+    'jun',
+    'jul',
+    'ago',
+    'sep',
+    'oct',
+    'nov',
+    'dic',
+  ];
+  final date = '${d.day} ${months[d.month - 1]} ${d.year}';
+  if (!time) return date;
+  return '$date, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+}
+
+const requestStates = {
+  'new': 'Recibida, el equipo aún no la revisa',
+  'acknowledged': 'El equipo ya la vio',
+  'contact_planned': 'El equipo coordinará un contacto contigo',
+  'in_followup': 'En seguimiento',
+  'closed': 'Cerrada',
+};
+const appointmentStates = {
+  'pending': 'Por confirmar',
+  'confirmed': 'Confirmada',
+  'completed': 'Realizada',
+  'cancelled': 'Cancelada',
+};
+
+/// Acepta la invitación sola o el enlace completo que entrega el colegio
+/// (https://colegio/app?inv=TOKEN). Devuelve servidor y token.
+({String server, String token}) parseInvitation(String text, String server) {
+  final value = text.trim();
+  final uri = Uri.tryParse(value);
+  if (uri != null && uri.hasScheme && uri.host.isNotEmpty) {
+    final token =
+        uri.queryParameters['inv'] ??
+        uri.queryParameters['invitation'] ??
+        uri.queryParameters['token'] ??
+        '';
+    if (token.isNotEmpty) {
+      return (server: '${uri.scheme}://${uri.authority}', token: token);
+    }
+  }
+  return (server: server.trim(), token: value);
 }
 
 class SchoolHome extends StatefulWidget {
@@ -32,12 +104,12 @@ class SchoolHome extends StatefulWidget {
 
 class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   static const bridge = MethodChannel('pe.upc.acompana/collector');
+  static const compiledServer = String.fromEnvironment('API_URL');
   Map<String, dynamic> status = {}, home = {}, requests = {}, answers = {};
+  Map<String, dynamic> device = {};
   List<dynamic> deliveryLog = [], responseHistory = [];
   Map<String, dynamic>? form;
-  final server = TextEditingController(
-    text: const String.fromEnvironment('API_URL'),
-  );
+  final server = TextEditingController(text: compiledServer);
   final invitation = TextEditingController(), code = TextEditingController();
   final scroll = ScrollController();
   int tab = 0;
@@ -45,11 +117,12 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   bool busy = false,
       accepted = false,
       refreshing = false,
-      preferencesDirty = false;
+      preferencesDirty = false,
+      editServer = compiledServer.isEmpty;
   String message = '';
   Timer? refreshTimer;
   bool startingSensors = false, formsLoaded = false, formsUnavailable = false;
-  bool sensorPermissionsChanged = false;
+  bool sensorPermissionsChanged = false, guideOpen = false;
   bool usage = false,
       location = false,
       steps = false,
@@ -57,6 +130,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       research = false,
       reminders = true;
   TimeOfDay reminder = const TimeOfDay(hour: 17, minute: 0);
+
   Future<void> correctHistory(Map<String, dynamic> row) async {
     final definition = Map<String, dynamic>.from(row['definition']);
     final corrected = Map<String, dynamic>.from(row['answers']);
@@ -74,12 +148,14 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
-                    'Corrige el mismo período. Conservaremos la respuesta anterior y las revisiones del equipo.',
+                    'Corrige el mismo período. Guardamos la respuesta anterior y lo que el equipo ya revisó.',
                   ),
                   for (final q in definition['questions']) ...[
+                    const SizedBox(height: 10),
                     Text(q['text']),
                     DropdownButtonFormField<int>(
                       initialValue: corrected[q['id']],
+                      isExpanded: true,
                       items: [
                         for (final o in definition['options'])
                           DropdownMenuItem(
@@ -90,9 +166,11 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                       onChanged: (v) => update(() => corrected[q['id']] = v),
                     ),
                   ],
+                  const SizedBox(height: 10),
                   Text(definition['functioning']['text']),
                   DropdownButtonFormField<int>(
                     initialValue: impact,
+                    isExpanded: true,
                     items: [
                       for (final o
                           in (definition['functioning']['options'] as List)
@@ -145,30 +223,35 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     }
   }
 
-  Widget historyCard() => card('Mis respuestas recibidas', [
+  Widget historyCard() => card('Mis respuestas', [
     const Text(
-      'Las correcciones conservan versiones anteriores. Los envíos sin conexión se muestran en Pendientes, hasta recibir confirmación.',
+      'Aquí ves los cuestionarios que el equipo ya recibió. Si te equivocaste, puedes corregirlos.',
     ),
     if (responseHistory.isEmpty)
-      const Text('Todavía no hay respuestas recibidas en este historial.'),
+      const Padding(
+        padding: EdgeInsets.only(top: 8),
+        child: Text('Todavía no hay respuestas recibidas.'),
+      ),
     for (final raw in responseHistory)
       Builder(
         builder: (context) {
           final row = Map<String, dynamic>.from(raw);
           final def = row['definition'];
           return ExpansionTile(
-            title: Text('${row['applied_at']} · Versión ${row['revision']}'),
+            tilePadding: EdgeInsets.zero,
+            title: Text(friendlyDate(row['applied_at'], time: false)),
             subtitle: Text(
               row['current'] == true
-                  ? 'Vigente · recibida'
-                  : 'Versión anterior · conservada',
+                  ? 'Recibida${(row['revision'] ?? 1) > 1 ? ' · corregida' : ''}'
+                  : 'Versión anterior (se conserva)',
             ),
             children: [
               for (final q in def['questions'])
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   title: Text(q['text']),
                   subtitle: Text(
-                    '${def['options'].firstWhere((o) => o['value'] == row['answers'][q['id']])['label']}',
+                    '${(def['options'] as List).firstWhere((o) => o['value'] == row['answers'][q['id']], orElse: () => {'label': '—'})['label']}',
                   ),
                 ),
               if (row['can_correct'] == true)
@@ -239,7 +322,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> refreshStatus() async {
+  Future<Map<String, dynamic>> refreshStatus() async {
     final s = Map<String, dynamic>.from(await call('schoolStatus'));
     if (mounted) {
       if (s['location_permission'] != status['location_permission'] ||
@@ -248,6 +331,19 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       }
       setState(() => status = s);
     }
+    return s;
+  }
+
+  Future<Map<String, dynamic>> refreshDevice() async {
+    try {
+      final d = await call('schoolDeviceSetup');
+      if (d is Map && mounted) {
+        setState(() => device = Map<String, dynamic>.from(d));
+      }
+    } catch (_) {
+      // Versiones anteriores del puente nativo: la guía funciona sin datos de marca.
+    }
+    return device;
   }
 
   Future<void> refresh() async {
@@ -263,10 +359,16 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         if (!mounted) return;
         applyHome(h); // Authorization must not depend on forms/history loading.
         await refreshStatus();
+        await refreshDevice();
         final f = await call('schoolForms') as List;
         if (!mounted) return;
         setState(() {
-          form = f.isEmpty ? null : Map<String, dynamic>.from(f.first);
+          final next = f.isEmpty ? null : Map<String, dynamic>.from(f.first);
+          if (next?['instrument_id'] != form?['instrument_id']) {
+            answers = {};
+            functioning = null;
+          }
+          form = next;
           formsLoaded = true;
           formsUnavailable = false;
         });
@@ -286,7 +388,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
           requests = r;
           responseHistory = historyRows;
           deliveryLog = log;
-          if (d['version'] == form?['version']) {
+          if (d['version'] == form?['version'] &&
+              (d['instrument'] == null ||
+                  d['instrument'] == form?['instrument_id'])) {
             answers = Map<String, dynamic>.from(d['answers'] ?? {});
             functioning = d['functioning'];
           }
@@ -308,7 +412,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       if (mounted) {
         setState(
           () => message =
-              'No se pudo actualizar todo. Mostramos la última información guardada; revisa tu conexión.',
+              'No pudimos actualizar todo. Te mostramos lo último guardado; revisa tu conexión a internet.',
         );
       }
     } finally {
@@ -323,6 +427,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       busy = true;
       message = '';
     });
+    final firstConsent =
+        method == 'schoolParticipation' &&
+        home['authorization']?['student'] != true;
     try {
       final v = await call(method, args);
       if (v is Map && mounted) {
@@ -337,10 +444,14 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       if (mounted) {
         setState(
           () => message = (status['rejected'] ?? 0) > 0
-              ? 'Hay un envío que no pudo aceptarse. Actualiza la información de participación o consulta al equipo.'
+              ? 'Hay un envío que no pudo aceptarse. Revisa "Estado de mis envíos" en Solicitudes o pide ayuda al equipo.'
               : (status['outbox_pending'] ?? 0) > 0
-              ? 'Guardado en este teléfono. Hay envíos pendientes: el equipo todavía no los recibió.'
-              : 'Operación completada. No hay envíos pendientes.',
+              ? 'Guardado en este teléfono. Se enviará solo cuando haya internet (el equipo todavía no los recibió).'
+              : method == 'schoolSupport'
+              ? 'Listo, tu solicitud llegó al equipo. Te contactarán en su horario de atención.'
+              : method == 'schoolSubmit'
+              ? '¡Gracias! Tu respuesta llegó al equipo.'
+              : 'Listo, todo está enviado.',
         );
       }
       final decisionState = status['decision_state'];
@@ -350,8 +461,8 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
           () => message = decisionState == 'confirmed'
               ? 'Participación guardada.'
               : decisionState == 'rejected'
-              ? 'No se pudo aceptar esta decisión. Revisa la información vigente y vuelve a intentarlo.'
-              : 'Decisión guardada en el teléfono; pendiente de conexión. La pausa o retirada ya detiene la captura local.',
+              ? 'No se pudo guardar esta decisión. Actualiza la pantalla e inténtalo otra vez.'
+              : 'Tu decisión se guardó en el teléfono y se enviará al tener internet. Si pausaste o te retiraste, la captura ya se detuvo.',
         );
         if (scroll.hasClients) {
           await scroll.animateTo(
@@ -360,13 +471,20 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             curve: Curves.easeOut,
           );
         }
+        // Después de aceptar por primera vez, la guía de permisos se abre sola.
+        if (firstConsent &&
+            decisionState == 'confirmed' &&
+            home['authorization']?['ready'] == true &&
+            mounted) {
+          await openGuide();
+        }
       }
     } on PlatformException catch (e) {
       if (mounted) {
         setState(
           () => message =
               e.message ??
-              'No se pudo completar. Conservamos los envíos pendientes.',
+              'No se pudo completar. Lo que estaba pendiente sigue guardado.',
         );
       }
     } finally {
@@ -415,13 +533,35 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> permission(String kind) async {
-    if (busy || home['authorization']?['ready'] != true) return;
-    final key = kind == 'background'
-        ? 'location'
-        : kind == 'notifications'
-        ? 'reminders'
-        : kind;
+  String preferenceFor(String kind) => kind == 'background'
+      ? 'location'
+      : kind == 'notifications'
+      ? 'reminders'
+      : kind;
+
+  /// Pide un permiso o ajuste. Si el permiso depende de una preferencia de participación que
+  /// aún no está activa, primero la guarda (un solo toque para el alumno). Devuelve el
+  /// resultado de Android: granted, denied, blocked, approximate, settings_opened…
+  Future<String?> permission(String kind) async {
+    if (busy || home['authorization']?['ready'] != true) return null;
+    if (kind == 'battery' || kind == 'autostart' || kind == 'settings') {
+      try {
+        final result = await call(
+          kind == 'battery'
+              ? 'schoolOpenBattery'
+              : kind == 'autostart'
+              ? 'schoolOpenAutostart'
+              : 'schoolOpenSettings',
+        );
+        return result is Map ? result['state'] : null;
+      } on PlatformException catch (e) {
+        if (mounted) setState(() => message = e.message ?? '');
+        return 'unavailable';
+      } on MissingPluginException {
+        return 'unavailable';
+      }
+    }
+    final key = preferenceFor(kind);
     if ((home['policy'] ?? {})[key] != true) {
       setState(() {
         if (key == 'usage') usage = true;
@@ -437,28 +577,32 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         (home['policy'] ?? {})[key] != true) {
       if (mounted) {
         setState(
-          () =>
-              message = 'Pendiente de conexión. El permiso aún no se solicitó.',
+          () => message =
+              'Tu elección se guardó, pero falta internet para confirmarla. El permiso se pedirá cuando vuelva la conexión.',
         );
       }
-      return;
+      return 'offline';
     }
     setState(() {
       busy = true;
       message = '';
     });
+    String? state;
     try {
       final result = await call('schoolPermission', {'kind': kind});
+      state = result is Map ? result['state'] : null;
       await refreshStatus();
       await ensureSensors(
         reconfigure:
-            result?['state'] == 'granted' &&
+            (state == 'granted' || state == 'approximate') &&
             (kind == 'location' || kind == 'steps'),
       );
       if (mounted) {
         setState(
-          () => message = result?['state'] == 'denied'
-              ? 'Permiso no concedido.'
+          () => message = state == 'denied'
+              ? 'Permiso no concedido. Puedes intentarlo otra vez cuando quieras.'
+              : state == 'blocked'
+              ? 'Android ya no muestra la ventana de este permiso. Actívalo desde "Abrir ajustes".'
               : '',
         );
       }
@@ -469,6 +613,33 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    return state;
+  }
+
+  Future<void> openGuide({String? initialKind}) async {
+    if (guideOpen || home['authorization']?['ready'] != true) return;
+    guideOpen = true;
+    try {
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => PermissionGuide(
+            initialKind: initialKind,
+            loadStatus: refreshStatus,
+            loadDevice: refreshDevice,
+            policy: () => home['policy'] ?? {},
+            request: permission,
+            confirm: (key) async {
+              try {
+                await call('schoolSetupConfirm', {'key': key, 'value': true});
+              } catch (_) {}
+            },
+          ),
+        ),
+      );
+    } finally {
+      guideOpen = false;
+    }
+    if (mounted) await refresh();
   }
 
   Future<void> startSensors() async {
@@ -484,10 +655,10 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       setState(() {
         status = result;
         message = result['sensor_running'] == true
-            ? 'Servicio iniciado. Verás una notificación; los primeros datos pueden tardar en llegar.'
+            ? 'Listo. Verás una notificación fija mientras se recogen datos.'
             : (result['sensor_error'] as String?)?.isNotEmpty == true
             ? result['sensor_error']
-            : 'El servicio todavía no se inició. Revisa los permisos y vuelve a intentarlo.';
+            : 'Todavía no se pudo iniciar. Revisa los permisos y vuelve a intentarlo.';
       });
     } on PlatformException catch (e) {
       if (mounted) {
@@ -527,16 +698,25 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     });
   }
 
-  Widget card(String title, List<Widget> children) => Card(
-    color: Colors.white,
-    margin: const EdgeInsets.only(bottom: 18),
+  Widget card(String title, List<Widget> children, {Widget? leading}) => Card(
+    margin: const EdgeInsets.only(bottom: 16),
     child: Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 14),
+          Row(
+            children: [
+              if (leading != null) ...[leading, const SizedBox(width: 12)],
+              Expanded(
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           ...children,
         ],
       ),
@@ -569,111 +749,97 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             change(v);
           },
   );
+
+  List<SetupStep> get steps_ => setupSteps(status, device);
+  int get readySteps => steps_
+      .where((s) => stepState(s, status, device, home['policy'] ?? {}) == 'ready')
+      .length;
+
   Widget permissionCard() {
     final p = home['policy'] ?? {};
     final canEdit = status['policy_pending'] != true;
-    Widget row(
-      String title,
-      IconData icon,
-      String kind,
-      bool granted, {
-      bool supported = true,
-      String? hint,
-    }) {
-      final key = kind == 'background'
-          ? 'location'
-          : kind == 'notifications'
-          ? 'reminders'
-          : kind;
-      final enabled = p[key] == true;
-      final ready = enabled && granted;
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Row(
-          children: [
-            Icon(
-              ready ? Icons.check_circle : icon,
-              color: ready ? Colors.teal : Colors.blueGrey,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    !supported
-                        ? 'No disponible en este teléfono'
-                        : ready
-                        ? 'Concedido'
-                        : enabled
-                        ? 'Pendiente'
-                        : 'No activado',
-                    style: TextStyle(
-                      color: ready ? Colors.teal : Colors.blueGrey,
-                    ),
-                  ),
-                  if (hint != null && !ready)
-                    Text(hint, style: Theme.of(context).textTheme.bodySmall),
-                ],
-              ),
-            ),
-            if (!ready && supported)
-              TextButton(
-                onPressed: busy || !canEdit ? null : () => permission(kind),
-                key: ValueKey('permission-$kind'),
-                child: Text('Permitir', semanticsLabel: 'Permitir $title'),
-              ),
-          ],
-        ),
-      );
-    }
-
-    final loc = [
-      'precise',
-      'approximate',
-    ].contains(status['location_permission']);
+    final list = steps_;
     return card('Permisos de este teléfono', [
-      const Text('Opcionales. Tú eliges qué compartir.'),
-      if (!canEdit) const Text('Esperando conexión para guardar tu elección.'),
-      row(
-        'Uso de pantalla',
-        Icons.phone_android,
-        'usage',
-        status['usage_access'] == 'available',
-        hint: 'Sin mensajes ni contenido.',
-      ),
-      row('Ubicación', Icons.location_on_outlined, 'location', loc),
-      if (p['location'] == true && loc)
-        row(
-          'Ubicación en segundo plano',
-          Icons.my_location,
-          'background',
-          status['background_location'] == true,
-        ),
-      row(
-        'Pasos',
-        Icons.directions_walk,
-        'steps',
-        status['steps_permission'] == true,
-        supported: status['steps_supported'] == true,
-      ),
-      row(
-        'Notificaciones',
-        Icons.notifications_outlined,
-        'notifications',
-        status['notifications_permission'] == true,
-      ),
-      const Divider(),
       Text(
-        home['capture_active'] != true
-            ? 'Participación pausada'
-            : status['sensor_running'] == true
-            ? 'Sensores activos'
-            : 'Los sensores se iniciarán al conceder permisos.',
+        'Todos son opcionales. $readySteps de ${list.length} activos.',
+      ),
+      if (!canEdit)
+        const Padding(
+          padding: EdgeInsets.only(top: 6),
+          child: Text('Esperando internet para guardar tu elección.'),
+        ),
+      for (final s in list)
+        Builder(
+          builder: (context) {
+            final state = stepState(s, status, device, p);
+            final ready = state == 'ready';
+            final unsupported = s.kind == 'steps' && status['steps_supported'] == false;
+            return ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                ready ? Icons.check_circle : s.icon,
+                color: stateColor(context, state),
+              ),
+              title: Text(s.title),
+              subtitle: Text(
+                unsupported
+                    ? 'No disponible en este teléfono'
+                    : ready
+                    ? 'Concedido'
+                    : stateLabels[state] ?? state,
+                style: TextStyle(color: stateColor(context, state)),
+              ),
+              onTap: busy || !canEdit
+                  ? null
+                  : () => openGuide(initialKind: s.kind),
+              trailing: ready || unsupported
+                  ? null
+                  : TextButton(
+                      key: ValueKey('permission-${s.kind}'),
+                      onPressed: busy || !canEdit
+                          ? null
+                          : s.kind == 'battery' || s.kind == 'autostart'
+                          ? () => openGuide(initialKind: s.kind)
+                          : () => permission(s.kind),
+                      child: Text(
+                        state == 'approximate'
+                            ? 'Usar precisa'
+                            : state == 'off'
+                            ? 'Activar'
+                            : 'Permitir',
+                        semanticsLabel: 'Permitir ${s.title}',
+                      ),
+                    ),
+            );
+          },
+        ),
+      button(
+        'Abrir guía paso a paso',
+        canEdit ? () => openGuide() : null,
+        secondary: true,
+      ),
+      const Divider(height: 32),
+      Row(
+        children: [
+          Icon(
+            home['capture_active'] != true
+                ? Icons.pause_circle_outline
+                : status['sensor_running'] == true
+                ? Icons.sensors
+                : Icons.hourglass_empty,
+            color: brandColor,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              home['capture_active'] != true
+                  ? 'Participación pausada'
+                  : status['sensor_running'] == true
+                  ? 'Sensores activos'
+                  : 'Los sensores se iniciarán al conceder ubicación o pasos.',
+            ),
+          ),
+        ],
       ),
       button(
         home['capture_active'] == true ? 'Pausar' : 'Reanudar',
@@ -681,6 +847,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         secondary: true,
       ),
       if ((status['sensor_error'] ?? '').toString().isNotEmpty) ...[
+        const SizedBox(height: 10),
         Text(status['sensor_error']),
         button('Reintentar inicio', startSensors, secondary: true),
       ],
@@ -689,38 +856,269 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
 
   Widget coverage() {
     final c = home['coverage'] ?? {};
-    return card('Tu equipo y recursos de apoyo', [
-      Text(c['text'] ?? 'Consulta a tu institución sus horarios de atención.'),
-      const SizedBox(height: 8),
-      Text(
-        c['open'] == true
-            ? 'El horario configurado está abierto.'
-            : 'Fuera del horario configurado o sin confirmación actual.',
-      ),
-      const Text(
-        'La aplicación no garantiza atención inmediata ni atención las 24 horas.',
-      ),
-      for (final r in c['resources'] ?? [])
-        Padding(
-          padding: const EdgeInsets.only(top: 12),
-          child: Text('${r['title']}\n${r['contact']}'),
+    return card(
+      'Tu equipo y recursos de apoyo',
+      [
+        Text(c['text'] ?? 'Consulta a tu colegio sus horarios de atención.'),
+        const SizedBox(height: 8),
+        Text(
+          c['open'] == true
+              ? 'Ahora el equipo está en horario de atención.'
+              : 'Ahora el equipo está fuera de su horario de atención.',
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-      const SizedBox(height: 8),
-      const Text(
-        'Sin conexión, estos son los últimos recursos guardados en el teléfono.',
-      ),
-    ]);
+        const Text(
+          'La app no reemplaza una atención de emergencia ni atiende las 24 horas.',
+        ),
+        for (final r in c['resources'] ?? [])
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.call_outlined, size: 20, color: brandColor),
+                const SizedBox(width: 10),
+                Expanded(child: Text('${r['title']}\n${r['contact']}')),
+              ],
+            ),
+          ),
+      ],
+      leading: const Icon(Icons.support_agent, color: brandColor),
+    );
   }
 
   Future<void> saveDraft() async {
     await call('schoolDraft', {
       'value': jsonEncode({
         'version': form?['version'],
+        'instrument': form?['instrument_id'],
         'answers': answers,
         'functioning': functioning,
       }),
     });
   }
+
+  bool get isPhq => form?['functioning'] != null;
+  List optionsFor(dynamic q) => (q['options'] ?? form!['options']) as List;
+
+  Future<void> submitForm() async {
+    final now = DateTime.now().toUtc();
+    final recallDays = (form!['recall_days'] ?? 14) as int;
+    final safety = isPhq && (answers['q9'] ?? 0) > 0;
+    await action('schoolSubmit', {
+      'path': form!['submit_path'] ?? '/me/questionnaires',
+      'body': jsonEncode({
+        'instrument_code': form!['instrument_id'],
+        'instrument_version': form!['version'],
+        'answers': answers,
+        if (isPhq) 'functioning': functioning,
+        'applied_at': now.toIso8601String(),
+        'recall_start': now.subtract(Duration(days: recallDays)).toIso8601String(),
+        'recall_end': now.toIso8601String(),
+      }),
+    });
+    if (safety && mounted) {
+      final c = home['coverage'] ?? {};
+      await showDialog<void>(
+        context: context,
+        builder: (dialog) => AlertDialog(
+          title: const Text('Gracias por contarlo'),
+          content: Text(
+            'Una persona del equipo de psicología revisará tu respuesta. Si sientes que podrías hacerte daño ahora mismo, no esperes: busca a un adulto de confianza o comunícate con:\n\n${[for (final r in c['resources'] ?? []) '${r['title']}: ${r['contact']}'].join('\n')}',
+          ),
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialog),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Widget questionnaire() {
+    final questions = form!['questions'] as List;
+    final done = questions.where((q) => answers[q['id']] != null).length;
+    final needsFunctioning = isPhq && answers.values.any((v) => v > 0);
+    final complete =
+        done == questions.length && (!needsFunctioning || functioning != null);
+    return card(isPhq ? 'Cómo te has sentido' : (form!['title'] ?? 'Pregunta breve'), [
+      Text(
+        form!['recall'] ??
+            form!['instructions'] ??
+            'Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 6),
+      const Text(
+        'No hay respuestas buenas ni malas. Solo el equipo de psicología verá lo que respondas.',
+      ),
+      const SizedBox(height: 10),
+      LinearProgressIndicator(value: questions.isEmpty ? 0 : done / questions.length),
+      Padding(
+        padding: const EdgeInsets.only(top: 4),
+        child: Text('$done de ${questions.length} respondidas'),
+      ),
+      for (final (i, q) in questions.indexed)
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: RadioGroup<int>(
+            groupValue: answers[q['id']],
+            onChanged: (v) {
+              if (busy) return;
+              setState(() => answers[q['id']] = v);
+              saveDraft();
+            },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  questions.length > 1 ? '${i + 1}. ${q['text']}' : q['text'],
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                for (final o in optionsFor(q))
+                  RadioListTile<int>(
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    value: o['value'],
+                    title: Text(o['label']),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      if (needsFunctioning) ...[
+        Text(
+          form!['functioning']['text'],
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        RadioGroup<int>(
+          groupValue: functioning,
+          onChanged: (v) {
+            if (busy) return;
+            setState(() => functioning = v);
+            saveDraft();
+          },
+          child: Column(
+            children: [
+              for (final o
+                  in (form!['functioning']['options'] as List).asMap().entries)
+                RadioListTile<int>(
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  value: o.key,
+                  title: Text(o.value),
+                ),
+            ],
+          ),
+        ),
+      ],
+      const Text(
+        'Tus respuestas se guardan cifradas en este teléfono mientras respondes. Solo se envían cuando tocas "Enviar respuesta".',
+      ),
+      button('Enviar respuesta', complete ? submitForm : null),
+    ]);
+  }
+
+  Widget setupCard() {
+    final list = steps_;
+    final ready = readySteps;
+    return card(
+      ready == list.length ? 'Tu teléfono está listo' : 'Prepara tu teléfono',
+      [
+        LinearProgressIndicator(value: list.isEmpty ? 0 : ready / list.length),
+        const SizedBox(height: 8),
+        Text(
+          ready == list.length
+              ? 'Todos los permisos que elegiste están activos.'
+              : '$ready de ${list.length} pasos listos. Te explicamos cada permiso antes de pedirlo.',
+        ),
+        if (ready < list.length)
+          button(
+            ready == 0 ? 'Empezar guía (3 min)' : 'Continuar guía',
+            () => openGuide(),
+          ),
+      ],
+      leading: Icon(
+        ready == list.length ? Icons.verified : Icons.settings_suggest_outlined,
+        color: brandColor,
+      ),
+    );
+  }
+
+  Widget onboarding() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      card('Un espacio para acompañarte', const [
+        Icon(Icons.favorite_border, size: 54, color: brandColor),
+        SizedBox(height: 14),
+        Text(
+          'Responde cuestionarios cortos sobre cómo te sientes y pide hablar con el equipo de psicología de tu colegio cuando lo necesites. Tú decides qué información opcional compartir.',
+        ),
+      ]),
+      card('Ingresa con tu invitación', [
+        const Text(
+          'Tu colegio te entregó una invitación (un enlace o un texto largo) y, por separado, un código de 8 números.',
+        ),
+        const SizedBox(height: 14),
+        TextField(
+          controller: invitation,
+          autocorrect: false,
+          minLines: 1,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: 'Invitación personal',
+            helperText: 'Puedes pegar el enlace completo.',
+          ),
+          onChanged: (v) {
+            final parsed = parseInvitation(v, server.text);
+            if (parsed.server != server.text && parsed.server.isNotEmpty) {
+              setState(() => server.text = parsed.server);
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: code,
+          keyboardType: TextInputType.number,
+          autocorrect: false,
+          decoration: const InputDecoration(
+            labelText: 'Código recibido por separado',
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (editServer)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: TextField(
+              controller: server,
+              keyboardType: TextInputType.url,
+              decoration: const InputDecoration(
+                labelText: 'Dirección HTTPS del colegio',
+                helperText: 'Se completa sola si pegas el enlace de invitación.',
+              ),
+            ),
+          )
+        else
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => editServer = true),
+              child: const Text('Cambiar dirección del colegio'),
+            ),
+          ),
+        button('Vincular mi teléfono', () {
+          final parsed = parseInvitation(invitation.text, server.text);
+          action('schoolEnroll', {
+            'server': parsed.server,
+            'invitation': parsed.token,
+            'code': code.text.trim(),
+          });
+        }),
+      ]),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -744,20 +1142,23 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 setState(() => tab = i);
                 refresh();
               },
-              destinations: const [
-                NavigationDestination(
+              destinations: [
+                const NavigationDestination(
                   icon: Icon(Icons.home_outlined),
                   label: 'Inicio',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.assignment_outlined),
+                  icon: Badge(
+                    isLabelVisible: form != null,
+                    child: const Icon(Icons.assignment_outlined),
+                  ),
                   label: 'Cuestionario',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.chat_bubble_outline),
                   label: 'Solicitudes',
                 ),
-                NavigationDestination(
+                const NavigationDestination(
                   icon: Icon(Icons.shield_outlined),
                   label: 'Participación',
                 ),
@@ -767,7 +1168,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       body: SafeArea(
         child: ListView(
           controller: scroll,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(16),
           children: [
             if (busy) const LinearProgressIndicator(),
             if (message.isNotEmpty)
@@ -776,14 +1177,17 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 child: Container(
                   padding: const EdgeInsets.all(14),
                   margin: const EdgeInsets.only(bottom: 16),
-                  color: const Color(0xffe3f2f0),
+                  decoration: BoxDecoration(
+                    color: const Color(0xffe3f2f0),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Text(message),
                 ),
               ),
             if (status['reauth_required'] == true)
               card('Tu acceso necesita renovarse', [
                 const Text(
-                  'Pide una nueva invitación a la institución. Para usarla se borrarán los borradores y envíos que queden en este teléfono.',
+                  'Pide una nueva invitación al colegio. Para usarla se borrarán los borradores y envíos que queden en este teléfono.',
                 ),
                 button(
                   'Borrar datos locales y usar nueva invitación',
@@ -795,76 +1199,63 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 padding: EdgeInsets.only(bottom: 12),
                 child: Text('Cuenta de prueba · identidad ficticia'),
               ),
-            if (!enrolled) ...[
-              card('Un espacio para acompañarte', const [
-                Icon(Icons.favorite_border, size: 54, color: Color(0xff137c84)),
-                SizedBox(height: 18),
-                Text(
-                  'Revisa tus actividades y solicita conversar con el equipo de tu institución. Tú decides qué información opcional compartir.',
-                ),
-              ]),
-              card('Ingresa con tu invitación', [
-                TextField(
-                  controller: server,
-                  keyboardType: TextInputType.url,
-                  decoration: const InputDecoration(
-                    labelText: 'Dirección HTTPS de la institución',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: invitation,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Invitación personal',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: code,
-                  keyboardType: TextInputType.number,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Código recibido por separado',
-                  ),
-                ),
-                button(
-                  'Vincular mi teléfono',
-                  () => action('schoolEnroll', {
-                    'server': server.text.trim(),
-                    'invitation': invitation.text.trim(),
-                    'code': code.text.trim(),
-                  }),
-                ),
-              ]),
-            ] else if (tab == 0) ...[
+            if (!enrolled)
+              onboarding()
+            else if (tab == 0) ...[
               card('Hola, ${home['name'] ?? 'bienvenido'}', [
                 Text(
                   auth['ready'] == true
                       ? 'Tu espacio de acompañamiento está disponible.'
-                      : 'Completa la información de participación para habilitar el cuestionario.',
+                      : auth['minor'] == true && auth['guardian'] != true
+                      ? 'Estamos esperando la autorización de tu madre, padre o apoderado. Cuando llegue, podrás continuar en Participación.'
+                      : 'Antes de empezar, lee la información de participación y decide si quieres participar.',
                 ),
                 if (home['pilot_enabled'] == false)
-                  const Text(
-                    'La institución aún no habilitó el piloto. No se recogen datos reales.',
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: Text(
+                      'El colegio aún no activó el piloto. Por ahora no se recogen datos.',
+                    ),
                   ),
-                button(
-                  'Quiero que me contacten',
-                  () => action('schoolSupport'),
-                  secondary: true,
-                ),
-                button(
-                  'Revisar mi participación',
-                  () => setState(() => tab = 3),
-                  secondary: true,
-                ),
-                const SizedBox(height: 12),
-                Text('Envíos pendientes: ${status['outbox_pending'] ?? 0}'),
-                Text(
-                  'Última sincronización: ${status['last_sync'] == '' ? 'Todavía no disponible' : status['last_sync'] ?? 'Todavía no disponible'}',
-                ),
+                if (auth['ready'] != true)
+                  button(
+                    'Revisar mi participación',
+                    () => setState(() => tab = 3),
+                  ),
+                if (form != null && auth['ready'] == true)
+                  button(
+                    isPhq
+                        ? 'Responder cuestionario (2 min)'
+                        : 'Responder ${(form!['title'] ?? 'pregunta').toString().toLowerCase()}',
+                    () {
+                      setState(() => tab = 1);
+                      refresh();
+                    },
+                  ),
               ]),
+              if (auth['ready'] == true) setupCard(),
+              card(
+                '¿Quieres hablar con alguien?',
+                [
+                  const Text(
+                    'Pide que el equipo de psicología de tu colegio te contacte. No necesitas explicar el motivo.',
+                  ),
+                  button(
+                    'Quiero que me contacten',
+                    () => action('schoolSupport'),
+                    secondary: true,
+                  ),
+                ],
+                leading: const Icon(Icons.chat_outlined, color: brandColor),
+              ),
               coverage(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Envíos pendientes: ${status['outbox_pending'] ?? 0} · Última sincronización: ${friendlyDate(status['last_sync'])}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
             ] else if (tab == 1) ...[
               if (form == null)
                 card(
@@ -872,116 +1263,31 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                       ? (formsUnavailable
                             ? 'Sin conexión'
                             : 'Consultando cuestionario…')
-                      : 'No hay cuestionario pendiente',
+                      : 'No tienes cuestionarios pendientes',
                   [
                     Text(
                       auth['ready'] != true
                           ? 'Primero completa tu participación.'
                           : (status['outbox_pending'] ?? 0) > 0
-                          ? 'Tu respuesta puede estar esperando conexión. Sincroniza para confirmar su recepción.'
+                          ? 'Tu respuesta puede estar esperando internet. Toca sincronizar (arriba a la derecha) para enviarla.'
+                          : home['next_questionnaire'] != null
+                          ? 'El próximo cuestionario aparecerá aquí desde el ${friendlyDate(home['next_questionnaire'], time: false)}. Te avisaremos.'
                           : 'Aparecerá aquí automáticamente.',
                     ),
                     button(
-                      'Solicitar contacto',
+                      'Quiero que me contacten',
                       () => action('schoolSupport'),
                       secondary: true,
                     ),
                   ],
                 )
               else
-                card('Cómo te has sentido', [
-                  Text(form!['title'] ?? 'Cuestionario PHQ-9'),
-                  Text(
-                    form!['recall'] ??
-                        form!['instructions'] ??
-                        'Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?',
-                  ),
-                  for (final q in form!['questions'])
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: RadioGroup<int>(
-                        groupValue: answers[q['id']],
-                        onChanged: (v) {
-                          if (busy) return;
-                          setState(() => answers[q['id']] = v);
-                          saveDraft();
-                        },
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              q['text'],
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            for (final o in form!['options'])
-                              RadioListTile<int>(
-                                contentPadding: EdgeInsets.zero,
-                                value: o['value'],
-                                title: Text(o['label']),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  if (answers.values.any((v) => v > 0)) ...[
-                    Text(form!['functioning']['text']),
-                    RadioGroup<int>(
-                      groupValue: functioning,
-                      onChanged: (v) {
-                        if (busy) return;
-                        setState(() => functioning = v);
-                        saveDraft();
-                      },
-                      child: Column(
-                        children: [
-                          for (final o
-                              in (form!['functioning']['options'] as List)
-                                  .asMap()
-                                  .entries)
-                            RadioListTile<int>(
-                              contentPadding: EdgeInsets.zero,
-                              value: o.key,
-                              title: Text(o.value),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  const Text(
-                    'Tu borrador se guarda cifrado en este teléfono. Solo se envía cuando eliges enviar.',
-                  ),
-                  button(
-                    'Enviar respuesta',
-                    answers.length == 9 &&
-                            (!answers.values.any((v) => v > 0) ||
-                                functioning != null)
-                        ? () async {
-                            final now = DateTime.now().toUtc();
-                            await action('schoolSubmit', {
-                              'body': jsonEncode({
-                                'instrument_code': form!['instrument_id'],
-                                'instrument_version': form!['version'],
-                                'answers': answers,
-                                'functioning': functioning,
-                                'applied_at': now.toIso8601String(),
-                                'recall_start': now
-                                    .subtract(const Duration(days: 14))
-                                    .toIso8601String(),
-                                'recall_end': now.toIso8601String(),
-                              }),
-                            });
-                          }
-                        : null,
-                  ),
-                ]),
-              coverage(),
+                questionnaire(),
               historyCard(),
             ] else if (tab == 2) ...[
               card('Mis solicitudes', [
                 const Text(
-                  'El equipo confirma y organiza el contacto desde su bandeja. Una solicitud recibida no significa que alguien ya la haya revisado.',
+                  'Cuando pides que te contacten, el equipo lo ve en su bandeja y coordina contigo.',
                 ),
                 button(
                   'Quiero que me contacten',
@@ -990,14 +1296,42 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 for (final r in requests['requests'] ?? [])
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Solicitud de acompañamiento'),
-                    subtitle: Text('${r['state']}'),
+                    leading: const Icon(Icons.mark_chat_read_outlined),
+                    title: Text(
+                      'Solicitud del ${friendlyDate(r['created_at'], time: false)}',
+                    ),
+                    subtitle: Text(requestStates[r['state']] ?? '${r['state']}'),
+                  ),
+              ]),
+              card('Mis citas', [
+                if ((requests['appointments'] ?? []).isEmpty)
+                  const Text('Todavía no tienes citas programadas.'),
+                for (final a in requests['appointments'] ?? [])
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          friendlyDate(a['date']),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if ((a['place'] ?? '').toString().isNotEmpty)
+                          Text('Lugar: ${a['place']}'),
+                        Text(appointmentStates[a['state']] ?? '${a['state']}'),
+                        if (a['state'] == 'pending')
+                          button(
+                            'Confirmar asistencia',
+                            () => action('schoolConfirm', {'id': a['id']}),
+                          ),
+                      ],
+                    ),
                   ),
               ]),
               if (deliveryLog.isNotEmpty)
                 card('Estado de mis envíos', [
                   const Text(
-                    'Tus respuestas y solicitudes se guardan cifradas en el teléfono hasta que el equipo las recibe. Nada se marca como recibido por caducar.',
+                    'Lo que envías se guarda cifrado en el teléfono hasta que el equipo lo recibe. Nada se marca como recibido si no llegó.',
                   ),
                   for (final item in deliveryLog)
                     ListTile(
@@ -1008,7 +1342,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                             ? 'Pendiente de envío — el equipo aún no lo recibió'
                             : item['state'] == 'rejected'
                             ? 'No se pudo registrar${(item['error'] ?? '').toString().contains('409') ? ': ya había una respuesta para ese período' : ''}. Puedes descartarlo o pedir apoyo.'
-                            : 'Datos de sensores caducados sin enviar. No afecta a tus cuestionarios ni solicitudes.',
+                            : 'Datos de sensores que vencieron sin enviarse. No afecta tus cuestionarios ni solicitudes.',
                         style: TextStyle(
                           color: item['state'] == 'rejected'
                               ? Theme.of(context).colorScheme.error
@@ -1027,29 +1361,14 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                           : null,
                     ),
                 ]),
-              card('Mis citas', [
-                if ((requests['appointments'] ?? []).isEmpty)
-                  const Text('Todavía no tienes citas programadas.'),
-                for (final a in requests['appointments'] ?? [])
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text('${a['date']} · ${a['place'] ?? ''}'),
-                      Text('${a['state']}'),
-                      if (a['state'] == 'pending')
-                        button(
-                          'Confirmar asistencia',
-                          () => action('schoolConfirm', {'id': a['id']}),
-                        ),
-                    ],
-                  ),
-              ]),
               coverage(),
             ] else ...[
               if (auth['ready'] == true) permissionCard(),
               if (auth['ready'] == true)
                 Card(
+                  margin: const EdgeInsets.only(bottom: 16),
                   child: ExpansionTile(
+                    shape: const Border(),
                     title: const Text('Mi participación y preferencias'),
                     children: [participationOptions(auth)],
                   ),
@@ -1066,7 +1385,11 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   Widget participationOptions(dynamic auth) => Column(
     children: [
       card('Tú decides', [
-        if (auth['ready'] != true) Text(home['purpose'] ?? ''),
+        if (auth['ready'] != true && (home['purpose'] ?? '').toString().isNotEmpty)
+          Text(
+            home['purpose'],
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         const SizedBox(height: 12),
         Text(
           home['document'] ??
@@ -1076,7 +1399,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
             child: Text(
-              'Falta la autorización de tu responsable. Se actualizará automáticamente.',
+              'Falta la autorización de tu madre, padre o apoderado. Se actualizará sola cuando la envíen.',
             ),
           ),
         if (auth['student'] != true && auth['guardian'] == true)
@@ -1089,12 +1412,15 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             ),
           ),
         if (auth['ready'] == true) ...[
+          const Text(
+            'Elige qué compartir. Puedes cambiarlo cuando quieras; para activar un permiso usa la guía de permisos.',
+          ),
           toggle(
-            'Uso del dispositivo',
+            'Uso de pantalla',
             usage,
             (v) => setState(() => usage = v),
             subtitle:
-                'Eventos de pantalla. No se leen mensajes, llamadas ni contenidos.',
+                'Cuándo y cuánto se enciende la pantalla. No vemos apps, mensajes, llamadas ni contenido.',
           ),
           toggle(
             'Ubicación',
@@ -1104,39 +1430,47 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
               if (!v) raw = false;
             }),
             subtitle:
-                'Puedes compartir resúmenes de movilidad calculados en tu teléfono.',
+                'Resúmenes calculados en tu teléfono: distancia, tiempo en casa y asistencia al colegio.',
           ),
           toggle(
-            'Pasos con el teléfono',
+            'Pasos',
             steps,
             (v) => setState(() => steps = v),
             subtitle:
-                'Requiere un sensor compatible; no mide toda tu actividad física.',
+                'Necesita un sensor compatible; no mide toda tu actividad física.',
           ),
-          if (location)
+          if (location) ...[
             toggle(
               'Enviar coordenadas al servidor',
               raw,
               (v) => setState(() => raw = v),
               subtitle:
-                  'Opcional. Si lo desactivas, las coordenadas permanecen en este teléfono.',
+                  'Opcional y poco común. Si lo dejas apagado, las coordenadas nunca salen de tu teléfono.',
             ),
-          if (location) ...[
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: Text(
+                '¿Estás en tu casa ahora? Puedes marcarla para calcular el tiempo que pasas en casa. Se guarda solo en tu teléfono.',
+              ),
+            ),
             button(
-              'Usar mi ubicación como zona habitual',
+              'Marcar este lugar como mi casa',
               () => action('schoolHomeZone', {'clear': false}),
               secondary: true,
             ),
-            button(
-              'Eliminar zona habitual',
-              () => action('schoolHomeZone', {'clear': true}),
-              secondary: true,
-            ),
+            if (home['has_home_zone'] == true || status['home_zone'] == true)
+              button(
+                'Borrar mi casa',
+                () => action('schoolHomeZone', {'clear': true}),
+                secondary: true,
+              ),
           ],
           toggle(
-            'Autorizar análisis de investigación',
+            'Permitir uso en investigación',
             research,
             (v) => setState(() => research = v),
+            subtitle:
+                'Tus datos, sin tu nombre, pueden usarse para mejorar la app.',
           ),
           toggle(
             'Recibir recordatorios',
@@ -1144,20 +1478,24 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             (v) => setState(() => reminders = v),
           ),
           if (reminders)
-            TextButton(
-              onPressed: () async {
-                final t = await showTimePicker(
-                  context: context,
-                  initialTime: reminder,
-                );
-                if (t != null) {
-                  setState(() {
-                    reminder = t;
-                    preferencesDirty = true;
-                  });
-                }
-              },
-              child: Text('Horario preferido: ${reminder.format(context)}'),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                icon: const Icon(Icons.schedule),
+                onPressed: () async {
+                  final t = await showTimePicker(
+                    context: context,
+                    initialTime: reminder,
+                  );
+                  if (t != null) {
+                    setState(() {
+                      reminder = t;
+                      preferencesDirty = true;
+                    });
+                  }
+                },
+                label: Text('Hora del recordatorio: ${reminder.format(context)}'),
+              ),
             ),
         ],
         button(
@@ -1179,7 +1517,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       ]),
       card('Retirar mi participación', [
         const Text(
-          'Se detiene la captura y se solicita borrar los datos. Si no hay conexión, el retiro queda pendiente y la captura se detiene aquí de inmediato.',
+          'Se detiene la captura y se pide borrar tus datos. Si no hay internet, la captura se detiene igual y el retiro se envía después.',
         ),
         button('Retirarme', () async {
           final yes = await showDialog<bool>(
@@ -1187,7 +1525,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             builder: (c) => AlertDialog(
               title: const Text('¿Retirar tu participación?'),
               content: const Text(
-                'Se solicitará borrar tus datos del sistema.',
+                'Se pedirá borrar tus datos del sistema. Para volver necesitarás una invitación nueva.',
               ),
               actions: [
                 TextButton(

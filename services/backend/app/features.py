@@ -7,6 +7,7 @@ from sqlalchemy import select
 from .db import *
 from .config import FEATURE_VERSION
 from .cases import add_reason
+from .sleep import sleep_features, FEATURES as SLEEP
 
 FEATURES = {
     "interactive_minutes": ("min", 15),
@@ -14,6 +15,8 @@ FEATURES = {
     "interactive_session_count": ("eventos", 5),
     "keyguard_hidden_count": ("eventos", 5),
 }
+# Variables de pantalla y de descanso que entran a la comparación con la referencia personal.
+DAILY = {**FEATURES, **SLEEP}
 
 
 def union(spans):
@@ -170,6 +173,8 @@ def build_day(events, captures, day, zone="America/Lima", keyguard=True, cutoff=
             "window_start": a.isoformat(),
             "window_end": b.isoformat(),
         }
+    # Proxy de descanso (sleep-proxy-v1.0) con los mismos usos y la misma cobertura.
+    values.update(sleep_features(spans, windows, day, zone, utc(cutoff) if cutoff else None))
     return {
         "features": values,
         "lineage": {
@@ -311,13 +316,13 @@ def process_device(db, device, start_day, end_day, version=FEATURE_VERSION):
         )
     )
     if exists and MODE == "REAL":
-        result = deviation(latest, cutoff)
+        result = deviation(latest, cutoff, DAILY)
         if exists.detail != result:
             exists.detail = result
             db.flush()
             persist_case(db, device.participant_id, exists)
     if not exists:
-        result = deviation(latest, cutoff)
+        result = deviation(latest, cutoff, DAILY)
         evaluation = Evaluation(
             participant_id=device.participant_id,
             cutoff=cutoff,
@@ -328,6 +333,20 @@ def process_device(db, device, start_day, end_day, version=FEATURE_VERSION):
         db.flush()
         persist_case(db, device.participant_id, evaluation)
     return {"days": (end - start).days + 1, "version": version, "cutoff": cutoff}
+
+
+def behavior_alerts(db, pid):
+    """Por defecto el cambio de conducta se muestra en el panel como información y no abre
+    casos: en las pruebas con datos públicos la regla ≥ 3 desviaciones por 3 días generó
+    demasiados falsos positivos. El equipo puede activarlo en la configuración."""
+    if MODE != "REAL":
+        return True
+    from .school_db import StudentProfile, Institution
+    from .school_core import settings
+    p = db.scalar(select(StudentProfile).where(StudentProfile.participant_id == pid))
+    if not p:
+        return True
+    return bool(settings(db.get(Institution, p.institution_id)).get("behavior_change_alerts"))
 
 
 def persist_case(db, pid, evaluation):
@@ -350,7 +369,7 @@ def persist_case(db, pid, evaluation):
         == 1
         for i in (0, 1)
     )
-    if consecutive and all(r.detail["candidate"] for r in rows):
+    if consecutive and all(r.detail["candidate"] for r in rows) and behavior_alerts(db, pid):
         add_reason(
             db,
             pid,

@@ -74,6 +74,15 @@ const fields: R = {
   home_minutes: "Tiempo en zona habitual",
   place_entropy: "Diversidad de lugares",
   observed_steps: "Pasos con el teléfono",
+  school_minutes: "Minutos en el colegio (horario de clases)",
+  sleep_duration_min: "Descanso estimado sin usar el teléfono",
+  sleep_onset_min: "Último uso de la noche",
+  wake_min: "Primer uso de la mañana",
+};
+const checkinNames: R = {
+  PHQ2_SEMANAL: "PHQ-2 semanal",
+  CONTACTO_DIARIO: "Contacto social del día",
+  CONTEXTO_MENSUAL: "Entorno (GSHS)",
 };
 const roleNames: R = {
   admin: "Administración",
@@ -324,6 +333,12 @@ export default function ProductApp() {
     return (
       <div className="product">
         <Guardian />
+      </div>
+    );
+  if (location.pathname === "/app")
+    return (
+      <div className="product">
+        <AppLink />
       </div>
     );
   if (location.pathname === "/student")
@@ -912,6 +927,41 @@ function Cases() {
     </>
   );
 }
+function AppLink() {
+  const link = location.href;
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="p-public">
+      <section className="p-card">
+        <h2>Tu invitación a Acompaña Escolar</h2>
+        <ol>
+          <li>Instala la app Acompaña Escolar que te indicó tu colegio.</li>
+          <li>Ábrela y toca la casilla "Invitación personal".</li>
+          <li>Pega este enlace completo.</li>
+          <li>
+            Escribe el código de 8 números que el colegio te entregó por
+            separado.
+          </li>
+        </ol>
+        <textarea readOnly value={link} rows={3} />
+        <button
+          type="button"
+          onClick={() =>
+            navigator.clipboard
+              ?.writeText(link)
+              .then(() => setCopied(true))
+              .catch(() => setCopied(false))
+          }
+        >
+          {copied ? "Enlace copiado" : "Copiar enlace"}
+        </button>
+        <p className="p-muted">
+          Este enlace es personal. No lo compartas con otras personas.
+        </p>
+      </section>
+    </div>
+  );
+}
 function InvitationResult({ value }: { value: R }) {
   const invite = value.invitation;
   const guardian = value.guardian;
@@ -924,9 +974,31 @@ function InvitationResult({ value }: { value: R }) {
         canal separado. No se envió ningún mensaje externo.
       </p>
       <label>
-        Invitación del estudiante
-        <textarea readOnly value={invite.token} />
+        Enlace para el estudiante (se pega en la app)
+        <textarea
+          readOnly
+          value={location.origin + "/app?inv=" + invite.token}
+        />
       </label>
+      <button
+        type="button"
+        className="p-secondary"
+        onClick={() =>
+          navigator.clipboard?.writeText(
+            "Hola. Este es tu enlace para Acompaña Escolar: " +
+              location.origin +
+              "/app?inv=" +
+              invite.token +
+              " . Instala la app, pega el enlace y escribe el código de 8 números que te daremos aparte.",
+          )
+        }
+      >
+        Copiar mensaje para el estudiante
+      </button>
+      <details>
+        <summary>Ver solo la invitación</summary>
+        <textarea readOnly value={invite.token} />
+      </details>
       <label>
         Código del estudiante
         <input readOnly value={invite.verification_code} />
@@ -1649,6 +1721,9 @@ function ProfileContent({ data }: { data: R }) {
                       </td>
                       <td>
                         <strong>{r.detail.total}</strong> / 27
+                        {r.detail.phq2 != null && (
+                          <small>PHQ-2: {r.detail.phq2} / 6</small>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -1663,7 +1738,58 @@ function ProfileContent({ data }: { data: R }) {
           )}
           <p className="p-muted">
             El PHQ-9 orienta la revisión profesional; no establece un
-            diagnóstico automático.
+            diagnóstico automático. Se propone revisión desde 11 puntos (corte
+            para adolescentes) o ante cualquier respuesta distinta de cero en la
+            pregunta 9.
+          </p>
+        </section>
+      </div>
+      <div className="p-columns">
+        <Trend
+          title="Descanso estimado (aproximación por uso del teléfono)"
+          rows={data.features || []}
+          selected="sleep_duration_min"
+        />
+        <section className="p-card">
+          <header>
+            <h2>Preguntas breves del piloto</h2>
+            <ClipboardList size={20} />
+          </header>
+          {data.checkins?.length ? (
+            <div className="p-table-wrap">
+              <table className="p-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Pregunta</th>
+                    <th>Respuesta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.checkins.slice(0, 40).map((r: R) => (
+                    <tr key={r.id}>
+                      <td>{stamp(r.applied_at)}</td>
+                      <td>{checkinNames[r.code] || r.title}</td>
+                      <td>
+                        {r.code === "PHQ2_SEMANAL"
+                          ? `${r.total} / 6`
+                          : Object.entries(r.answers || {})
+                              .map(([k, v]) => `${k}: ${v}`)
+                              .join(" · ")}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <Empty title="Sin preguntas breves">
+              Se activan en Configuración, sección Piloto.
+            </Empty>
+          )}
+          <p className="p-muted">
+            Estas respuestas no abren casos. El descanso es el periodo nocturno
+            más largo sin usar el teléfono: no mide sueño real.
           </p>
         </section>
       </div>
@@ -1681,6 +1807,7 @@ function ProfileContent({ data }: { data: R }) {
               "home_minutes",
               "place_entropy",
               "observed_steps",
+              "school_minutes",
             ].map((v) => (
               <option value={v} key={v}>
                 {fields[v]}
@@ -1975,7 +2102,7 @@ function CasePage({ id }: { id: string }) {
                             : r.kind === "questionnaire_review"
                               ? `El cuestionario recibido propone revisión profesional. Puntaje registrado: ${r.detail.total}.`
                               : r.kind === "behavior_change"
-                                ? "Se observaron cambios persistentes respecto a su propio historial. Revisa las unidades y la calidad antes de interpretarlos."
+                                ? "Se observaron cambios persistentes respecto a su propio historial. Es información de contexto, no un resultado validado: revisa las unidades y la calidad antes de interpretarlos."
                                 : "Una versión autorizada del modelo propone revisión; contrasta la estimación con la información disponible."}
                       </p>
                       <small>{stamp(r.created_at)}</small>
@@ -2489,6 +2616,20 @@ function SchoolSettings({ onSaved }: { onSaved: () => void }) {
               f.get("location_interval_minutes"),
             ),
             location_distance_meters: Number(f.get("location_distance_meters")),
+            phq2_weekly_enabled: f.has("phq2_weekly_enabled"),
+            daily_social_enabled: f.has("daily_social_enabled"),
+            context_questions_enabled: f.has("context_questions_enabled"),
+            behavior_change_alerts: f.has("behavior_change_alerts"),
+            school_zone: f.get("zone_latitude")
+              ? {
+                  latitude: Number(f.get("zone_latitude")),
+                  longitude: Number(f.get("zone_longitude")),
+                  radius_m: Number(f.get("zone_radius") || 150),
+                }
+              : null,
+            school_days: f.getAll("school_days").map(Number),
+            school_start: f.get("school_start"),
+            school_end: f.get("school_end"),
           })
         }
         done={() => {
@@ -2805,6 +2946,119 @@ function SchoolSettings({ onSaved }: { onSaved: () => void }) {
             />{" "}
             Autorizar canales externos configurados para avisos genéricos
           </label>
+        </section>
+        <section className="p-card">
+          <header>
+            <h2>
+              <span className="p-step">5</span> Piloto: preguntas breves y
+              asistencia
+            </h2>
+          </header>
+          <p className="p-muted">
+            Las preguntas breves sirven para validar el piloto. Ninguna abre
+            casos: la pregunta 9 del PHQ-9 y el botón de ayuda siguen siendo las
+            vías de alerta inmediata.
+          </p>
+          <label className="p-check">
+            <input
+              type="checkbox"
+              name="phq2_weekly_enabled"
+              defaultChecked={cfg.phq2_weekly_enabled}
+            />{" "}
+            PHQ-2 semanal (preguntas 1 y 2 del PHQ-9)
+          </label>
+          <label className="p-check">
+            <input
+              type="checkbox"
+              name="daily_social_enabled"
+              defaultChecked={cfg.daily_social_enabled}
+            />{" "}
+            Pregunta diaria de contacto social (un toque)
+          </label>
+          <label className="p-check">
+            <input
+              type="checkbox"
+              name="context_questions_enabled"
+              defaultChecked={cfg.context_questions_enabled}
+            />{" "}
+            Tres preguntas mensuales de entorno (acoso, apoyo familiar, amigos)
+          </label>
+          <label className="p-check">
+            <input
+              type="checkbox"
+              name="behavior_change_alerts"
+              defaultChecked={cfg.behavior_change_alerts}
+            />{" "}
+            Abrir casos por cambios de comportamiento del teléfono (no
+            recomendado sin validación; si está apagado se muestran solo como
+            información)
+          </label>
+          <h3>Zona del colegio para estimar asistencia</h3>
+          <p className="p-muted">
+            El teléfono compara su ubicación con este círculo solo en horario de
+            clases y envía únicamente los minutos dentro, nunca las
+            coordenadas. Copie latitud y longitud desde Google Maps (clic
+            derecho sobre el colegio). Déjelo vacío para no calcular
+            asistencia.
+          </p>
+          <div className="p-form-grid">
+            <Input
+              label="Latitud"
+              name="zone_latitude"
+              type="number"
+              step="any"
+              min={-90}
+              max={90}
+              required={false}
+              value={cfg.school_zone?.latitude ?? ""}
+            />
+            <Input
+              label="Longitud"
+              name="zone_longitude"
+              type="number"
+              step="any"
+              min={-180}
+              max={180}
+              required={false}
+              value={cfg.school_zone?.longitude ?? ""}
+            />
+            <Input
+              label="Radio (metros)"
+              name="zone_radius"
+              type="number"
+              min={50}
+              max={1000}
+              required={false}
+              value={cfg.school_zone?.radius_m ?? 150}
+            />
+            <Input
+              label="Inicio de clases"
+              name="school_start"
+              type="time"
+              value={cfg.school_start || "07:30"}
+            />
+            <Input
+              label="Fin de clases"
+              name="school_end"
+              type="time"
+              value={cfg.school_end || "13:30"}
+            />
+          </div>
+          <div className="p-weekdays">
+            {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map((v, n) => (
+              <label key={v}>
+                <input
+                  type="checkbox"
+                  name="school_days"
+                  value={n}
+                  defaultChecked={(cfg.school_days || [0, 1, 2, 3, 4]).includes(
+                    n,
+                  )}
+                />
+                {v}
+              </label>
+            ))}
+          </div>
         </section>
       </Form>
     </>

@@ -71,6 +71,7 @@ class SchoolCollector(private val context:Context) {
             .put("steps_running",LocationService.stepsRunning)
             .put("sensor_error",LocationService.lastError)
             .put("location_permission",locationPermission)
+            .put("battery_unrestricted",DeviceSetup.batteryUnrestricted(context))
             .put("background_location",context.checkSelfPermission(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)==0)
             .put("steps_permission",context.checkSelfPermission(android.Manifest.permission.ACTIVITY_RECOGNITION)==0)
             .put("notifications_permission",androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled())
@@ -130,9 +131,10 @@ class SchoolCollector(private val context:Context) {
         dao.dismiss(id);return status()
     }
     fun draft(value:String?):String {if(value!=null)vault.put("school_draft",value);return vault.get("school_draft","{}")}
-    fun submit(body:String):String=synchronized(Collector.mutex){
+    fun submit(body:String,path:String="/me/questionnaires"):String=synchronized(Collector.mutex){
+        require(path in listOf("/me/questionnaires","/me/check-ins")){"Destino de envío no permitido"}
         check(dao.pending("school_form").isEmpty()){"Ya tienes una respuesta pendiente de envío"}
-        queue("school_form","/me/questionnaires",body);vault.put("school_draft","{}");vault.put("school_forms","[]")
+        queue("school_form",path,body);vault.put("school_draft","{}");vault.put("school_forms","[]")
         try{sync()}catch(e:Exception){vault.put("sync_error","Respuesta guardada en el teléfono; pendiente de recepción")};status()
     }
     fun support():String=synchronized(Collector.mutex){
@@ -211,7 +213,8 @@ class SchoolCollector(private val context:Context) {
                 if(vault.get("summary_$day").isEmpty()){
                     val rows=dao.localSensors(System.currentTimeMillis()-TimeUnit.DAYS.toMillis(7)).map{JSONObject(it.body)}.filter{vault.get(it.getString("kind"))=="true"}
                     val home=if(vault.get("home_zone").isEmpty())null else JSONObject(vault.get("home_zone"))
-                    val summary=MobilityMath.summary(rows,day,analysisZone.id,home)
+                    val school=JSONObject(vault.get("school_home","{}")).optJSONObject("school_zone")
+                    val summary=MobilityMath.summary(rows,day,analysisZone.id,home,null,school)
                     summary.remove("lineage");summary.remove("notice");queue("summary","/me/sensor-summary",summary.toString());vault.put("summary_$day","queued")
                 }
             }
@@ -223,5 +226,5 @@ class SchoolCollector(private val context:Context) {
     private fun schedule(){WorkManager.getInstance(context).enqueueUniquePeriodicWork("school-sync",ExistingPeriodicWorkPolicy.KEEP,PeriodicWorkRequestBuilder<SchoolWorker>(15,TimeUnit.MINUTES).build())}
 }
 class SchoolWorker(context:Context,params:WorkerParameters):Worker(context,params){
-    override fun doWork():Result=try{val c=SchoolCollector(applicationContext);Collector(applicationContext).capture();c.sync();SchoolReminders.show(applicationContext);Result.success()}catch(_:Exception){Result.retry()}
+    override fun doWork():Result=try{DeviceSetup.restartIfNeeded(applicationContext);val c=SchoolCollector(applicationContext);Collector(applicationContext).capture();c.sync();SchoolReminders.show(applicationContext);Result.success()}catch(_:Exception){Result.retry()}
 }

@@ -8,7 +8,7 @@ from .school_db import Institution, DatasetRecord, ModelRecord, Prediction
 from .school_core import student_actor, authorization_status
 from .school_schemas import Strict
 from .security import identity, database, once, audit
-from .phq9 import PHQ9
+from .phq9 import PHQ9, phq2
 from .forms import score
 from .cases import add_reason
 
@@ -92,7 +92,7 @@ def correct(ident: UUID, body: Correction, actor=Depends(identity), db=Depends(d
         root = response_root(original)
         row = Response(participant_id=p.participant_id, instrument_id=original.instrument_id,
             detail={**original.detail, "answers": body.answers, "functioning": body.functioning,
-                    "total": total, "root_response_id": root, "supersedes": original.id,
+                    "total": total, "phq2": phq2(body.answers), "root_response_id": root, "supersedes": original.id,
                     "revision": int(original.detail.get("revision", 1)) + 1,
                     "correction_reason": body.reason.strip(), "corrected_at": now().isoformat(),
                     "authorization_snapshot": authorization_status(db, p)})

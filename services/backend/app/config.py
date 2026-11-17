@@ -15,7 +15,7 @@ if MODE in ("LAB", "REAL") and not COOKIE_SECURE and not (MODE == "REAL" and LOC
 ARTIFACTS = Path(os.getenv("ARTIFACT_DIR", ".runtime/artifacts")) / MODE
 ARTIFACTS.mkdir(parents=True, exist_ok=True)
 ARTIFACTS.chmod(0o700)
-FEATURE_VERSION = "screen-v1.0"
+FEATURE_VERSION = "screen-v1.1"
 CONSENT_VERSION = "lab-v1"
 RAW_RETENTION_DAYS = int(os.getenv("RAW_RETENTION_DAYS", "7"))
 FEATURE_RETENTION_DAYS = int(os.getenv("FEATURE_RETENTION_DAYS", "90"))

@@ -19,6 +19,9 @@ class MainActivity:FlutterActivity(){
         "notifications"->androidx.core.app.NotificationManagerCompat.from(this).areNotificationsEnabled()
         else->false
     }
+    // Para pedir ubicación exigimos la precisa: los resúmenes de movilidad descartan puntos aproximados.
+    private fun requestSatisfied(kind:String):Boolean=if(kind=="location")checkSelfPermission(android.Manifest.permission.ACCESS_FINE_LOCATION)==0 else permissionGranted(kind)
+    private var permissionList:Array<String> = arrayOf()
     private fun permissionResult(result:MethodChannel.Result,state:String){result.success(org.json.JSONObject().put("state",state).toString())}
     private fun askPermission(kind:String,result:MethodChannel.Result){
         if(permissionReply!=null){result.error("PERMISSION_BUSY","Responde primero al permiso que está abierto",null);return}
@@ -35,7 +38,7 @@ class MainActivity:FlutterActivity(){
             startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS,Uri.parse("package:$packageName")))
             permissionResult(result,"settings_opened");return
         }
-        if(permissionGranted(kind)){permissionResult(result,"granted");return}
+        if(requestSatisfied(kind)){permissionResult(result,"granted");return}
         if(kind=="background" && !permissionGranted("location")){result.error("LOCATION_REQUIRED","Primero permite ubicación al usar la app",null);return}
         if(kind=="background" && android.os.Build.VERSION.SDK_INT>=30){
             startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
@@ -52,18 +55,28 @@ class MainActivity:FlutterActivity(){
             "background"->arrayOf(android.Manifest.permission.ACCESS_BACKGROUND_LOCATION)
             else->{result.error("PERMISSION_UNKNOWN","Permiso desconocido",null);return}
         }
-        if(v.get("permission_asked_$kind")=="true" && permissions.none{shouldShowRequestPermissionRationale(it)}){
-            startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
-            permissionResult(result,"settings_opened");return
+        // Android deja de mostrar la ventana tras dos rechazos ("no volver a preguntar").
+        // En ese caso informamos "blocked" y la app explica cómo activarlo en Ajustes.
+        if(v.get("permission_blocked_$kind")=="true" && permissions.none{shouldShowRequestPermissionRationale(it)}){
+            permissionResult(result,"blocked");return
         }
-        permissionReply=result;permissionKind=kind;v.put("permission_asked_$kind","true")
+        permissionReply=result;permissionKind=kind;permissionList=permissions;v.put("permission_asked_$kind","true")
         requestPermissions(permissions,61)
     }
     override fun onRequestPermissionsResult(requestCode:Int,permissions:Array<out String>,grantResults:IntArray){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults)
         if(requestCode==61){
             val reply=permissionReply;permissionReply=null
-            if(reply!=null)permissionResult(reply,if(permissionGranted(permissionKind))"granted" else "denied")
+            if(reply!=null){
+                val state=when{
+                    requestSatisfied(permissionKind)->"granted"
+                    permissionKind=="location" && permissionGranted("location")->"approximate"
+                    permissionList.none{shouldShowRequestPermissionRationale(it)}->"blocked"
+                    else->"denied"
+                }
+                Vault(this).put("permission_blocked_$permissionKind",(state=="blocked").toString())
+                permissionResult(reply,state)
+            }
         }
     }
 
@@ -89,6 +102,19 @@ class MainActivity:FlutterActivity(){
                         }
                     },350)
                 }catch(_:Exception){result.error("SENSOR_START","Abre la aplicación y comprueba los permisos",null)}
+            }else if(call.method=="schoolDeviceSetup"){
+                result.success(DeviceSetup.info(this).toString())
+            }else if(call.method=="schoolOpenBattery"){
+                permissionResult(result,DeviceSetup.openBattery(this))
+            }else if(call.method=="schoolOpenAutostart"){
+                permissionResult(result,DeviceSetup.openAutostart(this))
+            }else if(call.method=="schoolOpenSettings"){
+                startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
+                permissionResult(result,"settings_opened")
+            }else if(call.method=="schoolSetupConfirm"){
+                val key=call.argument<String>("key")?:""
+                if(key in listOf("autostart")){Vault(this).put("setup_$key",(call.argument<Boolean>("value")?:true).toString())}
+                result.success(DeviceSetup.info(this).toString())
             }else if(call.method=="openUsageSettings"){
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS,Uri.parse("package:$packageName")));result.success(null)
             }else executor.execute{
@@ -106,7 +132,7 @@ class MainActivity:FlutterActivity(){
                         "schoolForms"->SchoolCollector(applicationContext).forms()
                         "schoolRequests"->SchoolCollector(applicationContext).requests()
                         "schoolDraft"->SchoolCollector(applicationContext).draft(call.argument<String>("value"))
-                        "schoolSubmit"->SchoolCollector(applicationContext).submit(call.argument<String>("body")!!)
+                        "schoolSubmit"->SchoolCollector(applicationContext).submit(call.argument<String>("body")!!,call.argument<String>("path")?:"/me/questionnaires")
                         "schoolSupport"->SchoolCollector(applicationContext).support()
                         "schoolConfirm"->SchoolCollector(applicationContext).confirm(call.argument<String>("id")!!)
                         "schoolDeliveryLog"->SchoolCollector(applicationContext).deliveryLog()

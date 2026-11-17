@@ -24,6 +24,12 @@ class Resource(Strict):
     verified_at: AwareDatetime
 
 
+class SchoolZone(Strict):
+    latitude: float = Field(ge=-90, le=90, allow_inf_nan=False)
+    longitude: float = Field(ge=-180, le=180, allow_inf_nan=False)
+    radius_m: int = Field(default=150, ge=50, le=1000)
+
+
 class Settings(Strict):
     document_version: str = Field(default="participacion-v1", min_length=3, max_length=40)
     participation_document: str = Field(min_length=30, max_length=12000)
@@ -46,9 +52,19 @@ class Settings(Strict):
     raw_location_retention_days: int = Field(default=7, ge=1, le=7)
     location_interval_minutes: int = Field(default=15, ge=5, le=120)
     location_distance_meters: int = Field(default=100, ge=20, le=1000)
+    phq2_weekly_enabled: bool = False
+    daily_social_enabled: bool = False
+    context_questions_enabled: bool = False
+    behavior_change_alerts: bool = False
+    school_zone: SchoolZone | None = None
+    school_days: list[int] = Field(default=[0, 1, 2, 3, 4], min_length=1, max_length=7)
+    school_start: str = Field(default="07:30", pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    school_end: str = Field(default="13:30", pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
 
     @model_validator(mode="after")
     def valid(self):
+        if any(d not in range(7) for d in self.school_days) or self.school_start >= self.school_end:
+            raise ValueError("Horario escolar inválido")
         if any(d not in range(7) for d in self.days) or self.opens >= self.closes:
             raise ValueError("Horario diurno inválido")
         if self.instrument_enabled and (not self.primary_id or not self.backup_id or self.primary_id == self.backup_id or not self.resources or len(self.professional_decision.strip()) < 10):
@@ -117,7 +133,7 @@ class ParticipationInput(Strict):
 
 class SchoolAnswer(Strict):
     instrument_code: Literal["PHQ9_ES_AETC_2016"]
-    instrument_version: Literal["AETC-2016-es-1"]
+    instrument_version: Literal["AETC-2016-es-2"]
     answers: dict[str, StrictInt]
     functioning: int | None = Field(default=None, ge=0, le=3)
     applied_at: AwareDatetime
@@ -210,8 +226,9 @@ class DatasetBuildSpec(Strict):
     features: list[Literal[
         "interactive_minutes", "night_interactive_minutes", "interactive_session_count",
         "keyguard_hidden_count", "observed_distance_m", "radius_gyration_m",
-        "home_minutes", "place_entropy", "observed_steps",
-    ]] = Field(min_length=1, max_length=9)
+        "home_minutes", "place_entropy", "observed_steps", "school_minutes",
+        "sleep_duration_min", "sleep_onset_min", "wake_min",
+    ]] = Field(min_length=1, max_length=13)
     authorization_reference: str = Field(min_length=10, max_length=400)
     include_test: bool = False
     from_day: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")

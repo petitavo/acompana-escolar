@@ -1097,3 +1097,5 @@ from .model_api import router as model_router
 app.include_router(model_router)
 from .response_history import router as response_history_router
 app.include_router(response_history_router)
+from .checkins import router as checkins_router
+app.include_router(checkins_router)

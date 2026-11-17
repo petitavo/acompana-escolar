@@ -15,6 +15,8 @@ void main() {
   String permissionState = 'granted';
   bool locationGranted = false, sensorRunning = false, policyPending = false;
   bool stepsGranted = false;
+  String locationMode = 'precise';
+  final deviceInfo = <String, dynamic>{};
   final starts = <dynamic>[];
   List<Map<String, dynamic>> deliveryLog = [];
   final home = {
@@ -81,6 +83,8 @@ void main() {
     permissionState = 'granted';
     locationGranted = false;
     stepsGranted = false;
+    locationMode = 'precise';
+    deviceInfo.clear();
     starts.clear();
     sensorRunning = false;
     policyPending = false;
@@ -107,7 +111,7 @@ void main() {
                   'steps_supported': true,
                   'steps_permission': stepsGranted,
                   'location_permission': locationGranted
-                      ? 'approximate'
+                      ? locationMode
                       : 'missing',
                   'sensor_running': sensorRunning,
                   'policy_pending': policyPending,
@@ -143,7 +147,7 @@ void main() {
                   'steps_supported': true,
                   'steps_permission': stepsGranted,
                   'location_permission': locationGranted
-                      ? 'approximate'
+                      ? locationMode
                       : 'missing',
                 });
               case 'schoolPermission':
@@ -182,6 +186,11 @@ void main() {
                   'decision_state': 'confirmed',
                   'home': home,
                 });
+              case 'schoolDeviceSetup':
+                return jsonEncode(deviceInfo);
+              case 'schoolOpenBattery':
+                deviceInfo['battery_unrestricted'] = true;
+                return '{"state":"granted"}';
               case 'schoolSupport':
                 return '{"enrolled":true,"outbox_pending":1}';
               default:
@@ -419,6 +428,11 @@ void main() {
     );
     await t.tap(find.text('Aceptar y continuar'));
     await t.pumpAndSettle();
+    // Tras aceptar, la guía de permisos se abre sola y no pide nada sin un toque.
+    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
+    expect(calls, isNot(contains('schoolPermission')));
+    await t.pageBack();
+    await t.pumpAndSettle();
     expect(find.text('Participación guardada.'), findsOneWidget);
     expect(find.text('Permisos de este teléfono'), findsOneWidget);
     expect(find.text('Aceptar y continuar'), findsNothing);
@@ -534,4 +548,79 @@ void main() {
       expect(find.byKey(const ValueKey('permission-steps')), findsNothing);
     },
   );
+
+  testWidgets('guide explains each step and offers settings when blocked', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    permissionState = 'blocked';
+    await t.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Abrir guía paso a paso'));
+    await t.pumpAndSettle();
+    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
+    await t.tap(find.text('Empezar'));
+    await t.pumpAndSettle();
+    expect(find.text('Paso 1 de 5'), findsOneWidget);
+    expect(find.textContaining('Lo que NO vemos'), findsWidgets);
+    await expectLater(
+      find.byType(SchoolApp),
+      matchesGoldenFile('goldens/product-guide.png'),
+    );
+    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
+    await t.pumpAndSettle();
+    expect(calls, contains('schoolPermission'));
+    expect(find.widgetWithText(FilledButton, 'Abrir ajustes'), findsOneWidget);
+    expect(calls, isNot(contains('schoolStartSensors')));
+  });
+
+  testWidgets('approximate location asks for precise location for attendance', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    (home['policy'] as Map)['location'] = true;
+    locationGranted = true;
+    locationMode = 'approximate';
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.text('Solo aproximada'), findsOneWidget);
+    expect(find.text('Usar precisa'), findsOneWidget);
+  });
+
+  testWidgets('autostart step only appears on brands that need it', (t) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    deviceInfo.addAll({'manufacturer': 'xiaomi', 'autostart_screen': true});
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('permission-autostart')), findsOneWidget);
+    deviceInfo
+      ..clear()
+      ..addAll({'manufacturer': 'samsung'});
+    await t.pumpWidget(const SizedBox());
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('permission-autostart')), findsNothing);
+  });
+
+  test('invitation link or plain code are both accepted', () {
+    final link = parseInvitation('https://x.pe/app?inv=abc123', 'https://otro');
+    expect(link.token, 'abc123');
+    expect(link.server, 'https://x.pe');
+    final plain = parseInvitation('  abc123 ', 'https://otro');
+    expect(plain.token, 'abc123');
+    expect(plain.server, 'https://otro');
+  });
 }

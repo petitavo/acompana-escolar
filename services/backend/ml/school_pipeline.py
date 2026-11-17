@@ -11,12 +11,18 @@ from app.db import Device, Feature, now, utc, uid
 from app.school_db import DatasetRecord, ModelRecord, StudentProfile, MobilityDay, Prediction
 from app.features import FEATURES as SCREEN
 from app.mobility import FEATURES as MOBILITY, VERSION as MOBILITY_VERSION
+from app.sleep import FEATURES as SLEEP
 from app.phq9 import PHQ9
 from app.config import ARTIFACTS
 
-CONTRACT = "school-features-v1.0"
-UNITS = {k: v[0] for k, v in {**SCREEN, **MOBILITY}.items()}
-FLOORS = {k: v[1] for k, v in {**SCREEN, **MOBILITY}.items()}
+# v1.1: añade descanso (sleep-proxy), asistencia (school_minutes) y el cuestionario anterior
+# como variables del modelo. En las pruebas con datos públicos el cuestionario anterior fue
+# la fuente con más señal (AUC ≈ 0.77–0.85 frente a ≈ 0.55 del celular solo).
+CONTRACT = "school-features-v1.1"
+UNITS = {k: v[0] for k, v in {**SCREEN, **SLEEP, **MOBILITY}.items()}
+FLOORS = {k: v[1] for k, v in {**SCREEN, **SLEEP, **MOBILITY}.items()}
+HISTORY = ["previous_phq9_total", "days_since_previous"]
+REVIEW_CUTOFF = PHQ9["review_threshold"]
 PARTS = ("current", "baseline", "delta", "robust_deviation", "available")
 
 
@@ -120,12 +126,25 @@ def windows(data):
         cutoff = label["recall_start"] if m["task"] == "prospective" else label["recall_end"]
         days = [d for d in data["days"] if d["participant_id"] == label["participant_id"]]
         x, explanation = vector(days, cutoff, names, m.get("timezone", "UTC"))
-        if not any(v is not None for j, v in enumerate(x) if j % 5 != 4):
-            continue
         earlier = [v for v in data["labels"] if v["participant_id"] == label["participant_id"] and v["id"] != label["id"] and max(utc(v["applied_at"]), utc(m.get("label_provenance", {}).get(v["id"], {}).get("collected_at", v["applied_at"]))) < utc(cutoff)]
         earlier.sort(key=lambda v: v["applied_at"])
+        previous = earlier[-1] if earlier else None
+        if not sensor_present(x) and previous is None:
+            continue
+        x = x + history_values(previous["score"] if previous else None, previous["applied_at"] if previous else None, cutoff)
         rows.append({"x": x, "y": label["score"], "participant_id": label["participant_id"], "label_id": label["id"], "label_start": label["recall_start"], "label_end": label["recall_end"], "cutoff": cutoff, "previous": earlier[-1]["score"] if earlier else None})
     return rows, names
+
+
+def sensor_present(x):
+    """True si alguna variable del celular tiene valor (sin contar la columna de disponibilidad)."""
+    return any(v is not None for j, v in enumerate(x) if j % len(PARTS) != len(PARTS) - 1)
+
+
+def history_values(previous_total, previous_at, cutoff):
+    if previous_total is None:
+        return [None, None]
+    return [previous_total, max(0.0, (utc(cutoff) - utc(previous_at)).total_seconds() / 86400)]
 
 
 def evaluate(y, pred, people, seed):
@@ -184,7 +203,8 @@ def evaluate_artifact(disk_path, splits, seed):
     deployed.load_model(disk_path)
     ridge = make_pipeline(SimpleImputer(strategy="median", keep_empty_features=True), Ridge(alpha=10))
     ridge.fit(x, y)
-    levels_idx = [j for j in range(x.shape[1]) if j % 5 in (0, 1, 4)]
+    sensor_cols = x.shape[1] - len(HISTORY)
+    levels_idx = [j for j in range(sensor_cols) if j % 5 in (0, 1, 4)] + list(range(sensor_cols, x.shape[1]))
     levels = XGBRegressor(n_estimators=80, max_depth=2, learning_rate=.05, random_state=seed, n_jobs=1, tree_method="hist")
     levels.fit(x[:, levels_idx], y)
     mean = float(np.mean(y))
@@ -197,10 +217,51 @@ def evaluate_artifact(disk_path, splits, seed):
         "levels_only": levels.predict(xt[:, levels_idx]),
     }
     metrics = {k: evaluate(yt, np.clip(v, 0, 27), test_people, seed) for k, v in comparators.items()}
+    metrics["screening"] = {k: screening(yt, np.clip(v, 0, 27)) for k, v in comparators.items()}
     metrics["artifact_sha256"] = _sha(disk_path)
     metrics["evaluated_at"] = now().isoformat()
     metrics["test_participants"] = sorted(set(test_people))
     return metrics
+
+
+def screening(y, pred, cutoff=None):
+    """Clasificación PHQ-9 ≥ corte: más fácil de leer para el psicólogo que el MAE en puntos."""
+    cutoff = REVIEW_CUTOFF if cutoff is None else cutoff
+    y, pred = np.asarray(y), np.asarray(pred, dtype=float)
+    truth, flag = y >= cutoff, pred >= cutoff
+    positives, negatives = int(truth.sum()), int((~truth).sum())
+    out = {"cutoff": cutoff, "positives": positives, "negatives": negatives,
+           "sensitivity": float((flag & truth).sum() / positives) if positives else None,
+           "specificity": float((~flag & ~truth).sum() / negatives) if negatives else None, "auc": None}
+    if positives and negatives:
+        from sklearn.metrics import roc_auc_score
+        out["auc"] = float(roc_auc_score(truth, pred))
+    return out
+
+
+def cross_validate(rows, seed):
+    """Validación cruzada por persona: deja fuera a un alumno (LOSO) con hasta 40 personas
+    o 5 grupos con más. Con un piloto de ~30 alumnos el 60/20/20 deja 1–2 personas en prueba
+    y no permite concluir; esta estimación usa a todos sin mezclar datos de una misma persona."""
+    from xgboost import XGBRegressor
+    from sklearn.model_selection import LeaveOneGroupOut, GroupKFold
+    x, y = _arrays(rows)
+    groups = np.array([r["participant_id"] for r in rows])
+    people = np.unique(groups)
+    if len(people) < 3:
+        return {"status": "insufficient_participants"}
+    splitter = LeaveOneGroupOut() if len(people) <= 40 else GroupKFold(n_splits=5)
+    preds = {"xgboost": np.zeros(len(y)), "last_questionnaire": np.zeros(len(y)), "constant": np.zeros(len(y))}
+    for train, test in splitter.split(x, y, groups):
+        m = XGBRegressor(n_estimators=80, max_depth=2, learning_rate=.05, random_state=seed, n_jobs=1, tree_method="hist")
+        m.fit(x[train], y[train])
+        mean = float(np.mean(y[train]))
+        preds["xgboost"][test] = m.predict(x[test])
+        preds["constant"][test] = mean
+        preds["last_questionnaire"][test] = [mean if rows[i]["previous"] is None else rows[i]["previous"] for i in test]
+    return {"status": "completed", "method": type(splitter).__name__, "participants": int(len(people)), "rows": int(len(y)),
+            "metrics": {k: {**evaluate(y, np.clip(v, 0, 27), groups, seed), "screening": screening(y, np.clip(v, 0, 27))} for k, v in preds.items()},
+            "notice": "Estimación por persona fuera de la muestra; los modelos de cada pliegue no se despliegan."}
 
 
 def temporal_probe(rows, splits, seed, folder):
@@ -239,12 +300,17 @@ def register_evaluated_model(db, record, disk_path, seed, folder, extra_manifest
     groups, splits = partition(rows, people, seed)
     metrics = evaluate_artifact(disk_path, splits, seed)
     temporal = temporal_probe(rows, splits, seed, folder)
-    columns = [f"{name}_{part}" for name in names for part in PARTS]
+    try:
+        validation = cross_validate(rows, seed)
+    except Exception as e:  # La validación cruzada informa; no bloquea el registro.
+        validation = {"status": "failed", "error": type(e).__name__}
+    columns = [f"{name}_{part}" for name in names for part in PARTS] + HISTORY
     artifact_sha = _sha(disk_path)
     manifest = {
         **record.manifest, "timezone": record.manifest.get("timezone", "UTC"), "columns": columns, "feature_names": names, "seed": seed,
         "partitions": {k: v for k, v in zip(("train", "validation", "test"), groups)},
         "labels": len(rows), "artifact_sha256": artifact_sha, "temporal": temporal,
+        "cross_validation": validation, "history_features": HISTORY, "review_cutoff": REVIEW_CUTOFF,
         "trained_at": now().isoformat(), "output_unit": "puntos PHQ-9",
         "clinical_validation": False, "dataset_sha256": record.sha256,
         "missing_values": "XGBoost missing; Ridge imputation fitted on train only",
@@ -331,6 +397,18 @@ def inference_eligible(db, p, purpose):
     return True, "eligible"
 
 
+def previous_phq9(db, participant_id, cutoff):
+    """Último PHQ-9 (versión vigente si fue corregido) aplicado antes del corte."""
+    from app.db import Response
+    from app.response_history import current_responses
+    rows = [r for r in current_responses(list(db.scalars(select(Response).where(Response.participant_id == participant_id))))
+            if r.detail.get("instrument_code") == PHQ9["instrument_id"] and "total" in r.detail and utc(r.detail["applied_at"]) < utc(cutoff) and utc(r.created_at) <= utc(cutoff)]
+    if not rows:
+        return None
+    last = max(rows, key=lambda r: utc(r.detail["applied_at"]))
+    return last.detail["total"], last.detail["applied_at"]
+
+
 def infer_registered(db, job):
     from app.db import Participant
     from app.school_db import Institution
@@ -375,8 +453,12 @@ def infer_registered(db, job):
                     if name in model.manifest["units"] and f["unit"] == model.manifest["units"][name] and utc(f["window_end"]) <= cutoff:
                         value["features"][name] = {"value": f["value"], "eligible": f["eligible"]}
         values, reference = vector(list(merged.values()), cutoff, model.manifest["feature_names"], model.manifest.get("timezone", "America/Lima"), job.payload.get("closed_day"))
-        if not any(v is not None for j, v in enumerate(values) if j % 5 != 4):
+        previous = previous_phq9(db, p.participant_id, cutoff)
+        if not sensor_present(values) and previous is None:
             continue
+        if model.manifest.get("history_features"):
+            values = values + history_values(previous[0] if previous else None, previous[1] if previous else None, cutoff)
+            reference["previous_phq9"] = {"total": previous[0], "applied_at": previous[1]} if previous else None
         result = predict(model, values)
         result.update({"state": model.state, "reference": reference, "cutoff": cutoff.isoformat(), "contract": CONTRACT, "purpose": purpose, "model_artifact_sha256": model.manifest.get("artifact_sha256")})
         # A08: re-check eligibility under a participant row lock right before we

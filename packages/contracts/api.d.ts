@@ -1550,6 +1550,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/school/me/check-ins": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer */
+        post: operations["answer_api_v1_school_me_check_ins_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1671,6 +1688,28 @@ export interface components {
              */
             keyguard_available: boolean;
         };
+        /** CheckInAnswer */
+        CheckInAnswer: {
+            /** Instrument Code */
+            instrument_code: string;
+            /** Instrument Version */
+            instrument_version: string;
+            /** Answers */
+            answers: {
+                [key: string]: number;
+            };
+            /**
+             * Applied At
+             * Format: date-time
+             */
+            applied_at: string;
+            /** Recall Start */
+            recall_start?: string | null;
+            /** Recall End */
+            recall_end?: string | null;
+            /** Functioning */
+            functioning?: number | null;
+        };
         /** ClassroomInput */
         ClassroomInput: {
             /** Name */
@@ -1735,7 +1774,7 @@ export interface components {
              */
             purpose: "clinical" | "research";
             /** Features */
-            features: ("interactive_minutes" | "night_interactive_minutes" | "interactive_session_count" | "keyguard_hidden_count" | "observed_distance_m" | "radius_gyration_m" | "home_minutes" | "place_entropy" | "observed_steps")[];
+            features: ("interactive_minutes" | "night_interactive_minutes" | "interactive_session_count" | "keyguard_hidden_count" | "observed_distance_m" | "radius_gyration_m" | "home_minutes" | "place_entropy" | "observed_steps" | "school_minutes" | "sleep_duration_min" | "sleep_onset_min" | "wake_min")[];
             /** Authorization Reference */
             authorization_reference: string;
             /**
@@ -2010,6 +2049,8 @@ export interface components {
             period_minutes: number;
             /** Cluster Observed Minutes */
             cluster_observed_minutes: number;
+            /** School Observed Minutes */
+            school_observed_minutes?: number | null;
         };
         /** LocalSummary */
         LocalSummary: {
@@ -2185,7 +2226,7 @@ export interface components {
              * Instrument Version
              * @constant
              */
-            instrument_version: "AETC-2016-es-1";
+            instrument_version: "AETC-2016-es-2";
             /** Answers */
             answers: {
                 [key: string]: number;
@@ -2207,6 +2248,18 @@ export interface components {
              * Format: date-time
              */
             recall_end: string;
+        };
+        /** SchoolZone */
+        SchoolZone: {
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /**
+             * Radius M
+             * @default 150
+             */
+            radius_m: number;
         };
         /** SensorBatch */
         SensorBatch: {
@@ -2358,6 +2411,48 @@ export interface components {
              * @default 100
              */
             location_distance_meters: number;
+            /**
+             * Phq2 Weekly Enabled
+             * @default false
+             */
+            phq2_weekly_enabled: boolean;
+            /**
+             * Daily Social Enabled
+             * @default false
+             */
+            daily_social_enabled: boolean;
+            /**
+             * Context Questions Enabled
+             * @default false
+             */
+            context_questions_enabled: boolean;
+            /**
+             * Behavior Change Alerts
+             * @default false
+             */
+            behavior_change_alerts: boolean;
+            school_zone?: components["schemas"]["SchoolZone"] | null;
+            /**
+             * School Days
+             * @default [
+             *       0,
+             *       1,
+             *       2,
+             *       3,
+             *       4
+             *     ]
+             */
+            school_days: number[];
+            /**
+             * School Start
+             * @default 07:30
+             */
+            school_start: string;
+            /**
+             * School End
+             * @default 13:30
+             */
+            school_end: string;
         };
         /** Setup */
         Setup: {
@@ -5388,6 +5483,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["Correction"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    answer_api_v1_school_me_check_ins_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "idempotency-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckInAnswer"];
             };
         };
         responses: {

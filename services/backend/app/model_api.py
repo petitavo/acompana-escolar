@@ -195,7 +195,7 @@ def import_model(body: ModelImport, actor=Depends(identity), db=Depends(database
     dataset = db.get(DatasetRecord, str(body.dataset_id))
     if not dataset or dataset.institution_id != m.institution_id:
         raise HTTPException(404, "Dataset autorizado no disponible")
-    from ml.school_pipeline import CONTRACT, PARTS, register_evaluated_model, dataset_rows
+    from ml.school_pipeline import CONTRACT, PARTS, HISTORY, register_evaluated_model, dataset_rows
     from .phq9 import PHQ9
     try:
         raw = base64.b64decode(body.artifact_base64, validate=True)
@@ -203,7 +203,7 @@ def import_model(body: ModelImport, actor=Depends(identity), db=Depends(database
         if not isinstance(decoded, dict) or "learner" not in decoded or decoded["learner"]["objective"]["name"] != "reg:squarederror":
             raise ValueError("Solo se admite JSON nativo XGBoost de regresión; no pickle")
         _, _, names, _ = dataset_rows(dataset)
-        columns = [f"{name}_{part}" for name in names for part in PARTS]
+        columns = [f"{name}_{part}" for name in names for part in PARTS] + HISTORY
         if int(decoded["learner"]["learner_model_param"]["num_feature"]) != len(columns):
             raise ValueError("El artefacto no coincide con las columnas del dataset")
         if dataset.manifest["contract"] != CONTRACT or dataset.manifest["instrument_version"] != PHQ9["version"]:

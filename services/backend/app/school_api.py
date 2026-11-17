@@ -16,7 +16,7 @@ from .school_core import *
 from .security import database, identity, digest, hasher, once, audit, require
 from .config import MODE, PILOT_ENABLED
 from .forms import score
-from .phq9 import PHQ9, ensure_phq9
+from .phq9 import PHQ9, ensure_phq9, phq2
 from .cases import add_reason, case_view
 
 router = APIRouter(prefix="/api/v1/school", tags=["Producto escolar"])
@@ -337,8 +337,8 @@ def student_home(actor=Depends(identity), db=Depends(database)):
     p = student_actor(db, actor)
     cfg = settings(db.get(Institution, p.institution_id))
     rows = list(db.scalars(select(Response).where(Response.participant_id == p.participant_id).order_by(Response.created_at.desc()).limit(1)))
-    due = utc(rows[0].created_at) + timedelta(days=cfg["cadence_days"]) if rows else now()
-    return {"analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}}
+    due = utc(rows[0].detail.get("applied_at", rows[0].created_at)) + timedelta(days=cfg["cadence_days"]) if rows else now()
+    return {"analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}, "school_zone": school_zone(cfg)}
 
 
 @router.post("/me/participation")
@@ -397,10 +397,18 @@ def due_questionnaires(actor=Depends(identity), db=Depends(database)):
     cfg = settings(db.get(Institution, p.institution_id))
     if not cfg["instrument_enabled"] or not authorization_status(db, p)["ready"] or not p.is_test and not PILOT_ENABLED:
         return []
-    last = db.scalar(select(Response).where(Response.participant_id == p.participant_id).order_by(Response.created_at.desc()))
-    if last and utc(last.detail.get("applied_at", last.created_at)) + timedelta(days=cfg["cadence_days"]) > now():
-        return []
-    return [{**PHQ9, "coverage": coverage_now(cfg)}]
+    from .checkins import due_forms
+    forms = []
+    if phq9_due(db, p, cfg):
+        forms.append({**PHQ9, "kind": "phq9", "submit_path": "/me/questionnaires", "coverage": coverage_now(cfg)})
+    # El PHQ-9 va primero; los cuestionarios breves del piloto aparecen después.
+    return forms + [{**f, "coverage": coverage_now(cfg)} for f in due_forms(db, p, cfg)]
+
+
+def phq9_due(db, p, cfg):
+    form = ensure_phq9(db)
+    last = db.scalar(select(Response).where(Response.participant_id == p.participant_id, Response.instrument_id == form.id).order_by(Response.created_at.desc()))
+    return not last or utc(last.detail.get("applied_at", last.created_at)) + timedelta(days=cfg["cadence_days"]) <= now()
 
 
 @router.post("/me/questionnaires")
@@ -421,7 +429,7 @@ def answer_questionnaire(body: SchoolAnswer, actor=Depends(identity), db=Depends
         last = db.scalar(select(Response).where(Response.participant_id == p.participant_id, Response.instrument_id == form.id).order_by(Response.created_at.desc()))
         if last and body.applied_at < utc(last.detail["applied_at"]) + timedelta(days=cfg["cadence_days"]):
             raise HTTPException(409, "Este período ya tiene una respuesta; no se duplican etiquetas")
-        row = Response(participant_id=p.participant_id, instrument_id=form.id, detail={**body.model_dump(mode="json"), "total": total, "complete": True, "real": not p.is_test, "provenance": "test_account" if p.is_test else "participant_report", "definition_sha256": PHQ9["definition_sha256"], "authorization_snapshot": authorization_status(db, p), "research_access_at_collection": bool(p.policy.get("research_access")), "revision": 1})
+        row = Response(participant_id=p.participant_id, instrument_id=form.id, detail={**body.model_dump(mode="json"), "total": total, "complete": True, "real": not p.is_test, "provenance": "test_account" if p.is_test else "participant_report", "definition_sha256": PHQ9["definition_sha256"], "phq2": phq2(body.answers), "review_threshold": PHQ9["review_threshold"], "authorization_snapshot": authorization_status(db, p), "research_access_at_collection": bool(p.policy.get("research_access")), "revision": 1})
         db.add(row)
         db.flush()
         if total >= PHQ9["review_threshold"]:
@@ -526,6 +534,8 @@ def clinical_profile(ident: UUID, actor=Depends(identity), db=Depends(database))
     result["mobility"] = list(latest.values())[-60:]
     result["predictions"] = [public(v) for v in db.scalars(select(Prediction).join(ModelRecord, ModelRecord.id == Prediction.model_id).where(Prediction.participant_id == p.participant_id, ModelRecord.state == "active").order_by(Prediction.cutoff.desc()).limit(30))]
     result["reference_message"] = "Estamos construyendo tu referencia" if not result["evaluations"] else None
+    from .checkins import history as checkin_history
+    result["checkins"] = checkin_history(db, p.participant_id)
     return result
 
 

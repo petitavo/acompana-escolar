@@ -1,7 +1,7 @@
 {
   "instrument_id": "PHQ9_ES_AETC_2016",
   "title": "Cuestionario sobre la salud del paciente-9 (PHQ-9)",
-  "version": "AETC-2016-es-1",
+  "version": "AETC-2016-es-2",
   "language": "es",
   "real": true,
   "recall": "Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?",
@@ -74,7 +74,13 @@
     "contributes_to_total": false
   },
   "scoring": "sum",
-  "review_threshold": 10,
+  "review_threshold": 11,
+  "threshold_reference": "Richardson LP et al. (2010). Evaluation of the PHQ-9 item for detecting major depression among adolescents. Pediatrics 126(6):1117-1123.",
+  "phq2_items": [
+    "q1",
+    "q2"
+  ],
+  "phq2_threshold": 3,
   "item_rules": [
     {
       "question_id": "q9",
@@ -87,6 +93,6 @@
   "source_sha256": "1041559d940ba6dd5c03132e8922dcc537b750051594322b68c8fe265a79e90c",
   "attribution": "Adapted from the patient health questionnaire (PHQ) screeners (www.phqscreeners.com). Accessed October 6, 2016. See website for additional information and translations.",
   "usage_permission": "AIMS Center: no permission is required to reproduce, translate, display, or distribute PHQ-9. https://aims.uw.edu/resource/phq-9-depression-scale/",
-  "notice": "PHQ-9 estándar en español; no PHQ-A. El puntaje propone revisión profesional, no establece un diagnóstico. Selección para adolescentes pendiente de decisión profesional registrada.",
-  "definition_sha256": "ca6055c93ca7ce468a2dc04fad4a64d9aeffce03934f0f69a3ecd8a5959518d6"
+  "notice": "PHQ-9 estándar en español con corte ≥ 11 validado en adolescentes de 13 a 17 años. El puntaje propone revisión profesional, no establece un diagnóstico.",
+  "definition_sha256": "13e1089fb10d72d1d35aef50065bf6e774fc860e7fd7b3d88086b2818cc500d7"
 }

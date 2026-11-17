@@ -55,6 +55,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -66,7 +76,8 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 0
+        "cluster_observed_minutes": 0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -167,6 +178,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -178,7 +199,8 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 30.0
+        "cluster_observed_minutes": 30.0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -269,6 +291,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -280,7 +312,8 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 0
+        "cluster_observed_minutes": 0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -391,6 +424,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -402,7 +445,8 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 0
+        "cluster_observed_minutes": 0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -577,6 +621,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -588,7 +642,8 @@
         "outside_minutes": 75.0,
         "uncertain_minutes": 1305.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 135.0
+        "cluster_observed_minutes": 135.0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -677,6 +732,16 @@
           "observed_minutes": 30.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -688,7 +753,8 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 0
+        "cluster_observed_minutes": 0,
+        "school_observed_minutes": null
       }
     }
   },
@@ -785,6 +851,16 @@
           "observed_minutes": 0.0,
           "window_start": "2025-01-02T00:00:00+00:00",
           "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
         }
       },
       "quality": {
@@ -796,7 +872,248 @@
         "outside_minutes": null,
         "uncertain_minutes": 1440.0,
         "period_minutes": 1440.0,
-        "cluster_observed_minutes": 0
+        "cluster_observed_minutes": 0,
+        "school_observed_minutes": null
+      }
+    }
+  },
+  {
+    "name": "school-attendance",
+    "samples": [
+      {
+        "id": "s0",
+        "kind": "location",
+        "occurred_at": "2025-01-02T07:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s1",
+        "kind": "location",
+        "occurred_at": "2025-01-02T07:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s2",
+        "kind": "location",
+        "occurred_at": "2025-01-02T08:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s3",
+        "kind": "location",
+        "occurred_at": "2025-01-02T08:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s4",
+        "kind": "location",
+        "occurred_at": "2025-01-02T08:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s5",
+        "kind": "location",
+        "occurred_at": "2025-01-02T08:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s6",
+        "kind": "location",
+        "occurred_at": "2025-01-02T09:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s7",
+        "kind": "location",
+        "occurred_at": "2025-01-02T09:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s8",
+        "kind": "location",
+        "occurred_at": "2025-01-02T09:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s9",
+        "kind": "location",
+        "occurred_at": "2025-01-02T09:45:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s10",
+        "kind": "location",
+        "occurred_at": "2025-01-02T10:00:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s11",
+        "kind": "location",
+        "occurred_at": "2025-01-02T10:15:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      },
+      {
+        "id": "s12",
+        "kind": "location",
+        "occurred_at": "2025-01-02T10:30:00+00:00",
+        "latitude": 0,
+        "longitude": 0.01,
+        "accuracy_m": 10,
+        "permission": "precise",
+        "age_ms": 0,
+        "segment_id": "a"
+      }
+    ],
+    "day": "2025-01-02",
+    "zone": "UTC",
+    "school": {
+      "latitude": 0,
+      "longitude": 0.01,
+      "radius_m": 150,
+      "days": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "start": "08:00",
+      "end": "10:00"
+    },
+    "expected": {
+      "features": {
+        "observed_distance_m": {
+          "value": 0.0,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.125,
+          "observed_minutes": 180.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "radius_gyration_m": {
+          "value": 0.0,
+          "unit": "m",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.125,
+          "observed_minutes": 180.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "home_minutes": {
+          "value": null,
+          "unit": "min",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.125,
+          "observed_minutes": 180.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "place_entropy": {
+          "value": -0.0,
+          "unit": "nats",
+          "state": "partial",
+          "eligible": false,
+          "operational_coverage": 0.125,
+          "observed_minutes": 180.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "observed_steps": {
+          "value": null,
+          "unit": "pasos",
+          "state": "missing",
+          "eligible": false,
+          "operational_coverage": 0.0,
+          "observed_minutes": 0.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        },
+        "school_minutes": {
+          "value": 120.0,
+          "unit": "min",
+          "state": "observed",
+          "eligible": true,
+          "operational_coverage": 0.0833,
+          "observed_minutes": 120.0,
+          "window_start": "2025-01-02T00:00:00+00:00",
+          "window_end": "2025-01-03T00:00:00+00:00"
+        }
+      },
+      "quality": {
+        "observed_minutes": 180.0,
+        "gap_count": 0,
+        "excluded_count": 0,
+        "step_resets": 0,
+        "inside_minutes": null,
+        "outside_minutes": null,
+        "uncertain_minutes": 1440.0,
+        "period_minutes": 1440.0,
+        "cluster_observed_minutes": 180.0,
+        "school_observed_minutes": 120.0
       }
     }
   }
