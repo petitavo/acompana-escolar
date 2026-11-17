@@ -32,11 +32,11 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
    Siempre hay "Ahora no". La guía se puede volver a abrir desde Inicio o desde Participación, y al regresar de Ajustes revisa sola qué quedó activo.
 4. **Inicio.** Muestra si hay un cuestionario pendiente, la tarjeta "Prepara tu teléfono" (cuántos pasos faltan), el botón "Quiero que me contacten" y el horario de atención del equipo.
 5. **Cuestionarios.** El PHQ-9 aparece cada 14 días o más (según configure el colegio). Si el equipo los activa, también aparecen:
-   - el PHQ-2 semanal,
+   - el PHQ-2 (preguntas 1 y 2 del PHQ-9), solo en la semana intermedia entre dos PHQ-9, para no repetir preguntas recién respondidas,
    - una pregunta diaria de contacto social,
    - tres preguntas mensuales de entorno (acoso, apoyo de los padres, amigos), adaptadas de la GSHS.
 
-   Si el estudiante marca algo distinto de "Ningún día" en la pregunta 9, la app le muestra en ese momento a quién llamar.
+   Mientras el PHQ-9 esté pendiente se muestra solo, para no encadenar cuestionarios. Si el estudiante marca algo distinto de "Ningún día" en la pregunta 9, la app le muestra en ese momento a quién llamar, con un botón "Llamar" que abre el marcador.
 6. **Sin internet.** Todo se guarda cifrado en el teléfono y se envía después. La pestaña Solicitudes muestra el estado de cada envío.
 7. **Pausar o retirarse.** En Participación se puede pausar la captura, cambiar lo que se comparte o retirarse; al retirarse se borran sus datos.
 
@@ -108,3 +108,4 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 - El código Kotlin (permisos, batería, inicio automático, asistencia) no se pudo compilar en el entorno donde se hicieron estos cambios. Debe compilarse y probarse en teléfonos reales antes del piloto.
 - Algunas marcas (sobre todo Xiaomi, Huawei y vivo) pueden cerrar la app aunque se sigan todos los pasos. Por eso la cobertura de cada día se muestra siempre.
 - El descanso es una aproximación por uso del teléfono, no una medición de sueño.
+- El PHQ-9 usa el texto validado AETC 2016 para adultos (trata de "usted" y menciona trabajo y tareas del hogar). No se modificó para no romper la validez del instrumento; si el equipo prefiere una versión para adolescentes (PHQ-A en español), debe decidirse con el asesor y registrarse como versión nueva.

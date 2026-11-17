@@ -29,7 +29,7 @@ CHECKINS = {
     "PHQ2_SEMANAL": {
         "instrument_id": "PHQ2_SEMANAL",
         "kind": "checkin",
-        "title": "Revisión semanal (2 preguntas)",
+        "title": "Revisión breve (2 preguntas)",
         "version": "phq2-aetc-2016-es-1",
         "setting": "phq2_weekly_enabled",
         "cadence_days": 7,
@@ -38,7 +38,7 @@ CHECKINS = {
         "questions": [q for q in PHQ9["questions"] if q["id"] in PHQ9["phq2_items"]],
         "options": _PHQ_OPTIONS,
         "provenance": PHQ9["provenance"],
-        "notice": "PHQ-2 (Kroenke et al., 2003). Solo para seguimiento del piloto; no abre casos.",
+        "notice": "PHQ-2 (Kroenke et al., 2003) con su periodo validado de 2 semanas. Se ofrece en la semana intermedia entre dos PHQ-9 (nunca en los 7 días posteriores a uno). Solo para seguimiento del piloto; no abre casos.",
     },
     "CONTACTO_DIARIO": {
         "instrument_id": "CONTACTO_DIARIO",
@@ -92,7 +92,20 @@ def enabled(cfg, code):
     return bool(cfg.get(CHECKINS[code]["setting"]))
 
 
+def last_phq9_at(db, p):
+    from .db import Response
+    from .phq9 import ensure_phq9
+    form = ensure_phq9(db)
+    row = db.scalar(select(Response).where(Response.participant_id == p.participant_id, Response.instrument_id == form.id).order_by(Response.created_at.desc()))
+    return utc(row.detail.get("applied_at", row.created_at)) if row else None
+
+
 def due(db, p, cfg, code):
+    if code == "PHQ2_SEMANAL":
+        # Repetiría los ítems 1 y 2 del PHQ-9 recién respondido: esperar una semana.
+        previous = last_phq9_at(db, p)
+        if previous is None or previous + timedelta(days=7) - timedelta(hours=12) > now():
+            return False
     last = db.scalar(select(CheckIn).where(CheckIn.participant_id == p.participant_id, CheckIn.code == code).order_by(CheckIn.applied_at.desc()))
     if not last:
         return True

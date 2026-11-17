@@ -398,11 +398,11 @@ def due_questionnaires(actor=Depends(identity), db=Depends(database)):
     if not cfg["instrument_enabled"] or not authorization_status(db, p)["ready"] or not p.is_test and not PILOT_ENABLED:
         return []
     from .checkins import due_forms
-    forms = []
     if phq9_due(db, p, cfg):
-        forms.append({**PHQ9, "kind": "phq9", "submit_path": "/me/questionnaires", "coverage": coverage_now(cfg)})
-    # El PHQ-9 va primero; los cuestionarios breves del piloto aparecen después.
-    return forms + [{**f, "coverage": coverage_now(cfg)} for f in due_forms(db, p, cfg)]
+        # Mientras el PHQ-9 esté pendiente se muestra solo: así nadie encadena
+        # varios cuestionarios seguidos. Las preguntas breves aparecen después.
+        return [{**PHQ9, "kind": "phq9", "submit_path": "/me/questionnaires", "coverage": coverage_now(cfg)}]
+    return [{**f, "coverage": coverage_now(cfg)} for f in due_forms(db, p, cfg)]
 
 
 def phq9_due(db, p, cfg):

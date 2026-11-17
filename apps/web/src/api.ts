@@ -34,9 +34,13 @@ export async function api(
     );
   return data;
 }
+// El servidor guarda en UTC; con SQLite algunas fechas llegan sin zona horaria y el
+// navegador las tomaría como hora local (5 h de diferencia en Lima).
+const asUtc = (v: string) =>
+  /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/.test(v) ? v + "Z" : v;
 export const stamp = (v?: string) =>
   v
-    ? new Date(v).toLocaleString("es-PE", {
+    ? new Date(asUtc(v)).toLocaleString("es-PE", {
         day: "2-digit",
         month: "short",
         hour: "2-digit",

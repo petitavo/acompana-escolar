@@ -229,6 +229,10 @@ void main() {
     );
     await t.tap(find.text('Quiero que me contacten'));
     await t.pumpAndSettle();
+    // Primero confirma, para no enviar pedidos por un toque accidental.
+    expect(calls, isNot(contains('schoolSupport')));
+    await t.tap(find.text('Sí, que me contacten'));
+    await t.pumpAndSettle();
     expect(calls, contains('schoolSupport'));
     expect(
       find.textContaining('el equipo todavía no los recibió'),
@@ -431,9 +435,15 @@ void main() {
     // Tras aceptar, la guía de permisos se abre sola y no pide nada sin un toque.
     expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
     expect(calls, isNot(contains('schoolPermission')));
+    // Y desde esa guía sí se puede pedir un permiso (antes quedaba bloqueada).
+    await t.tap(find.text('Empezar'));
+    await t.pumpAndSettle();
+    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
+    await t.pumpAndSettle();
+    expect(calls.where((x) => x == 'schoolPermission').length, 1);
+    calls.removeWhere((x) => x == 'schoolPermission');
     await t.pageBack();
     await t.pumpAndSettle();
-    expect(find.text('Participación guardada.'), findsOneWidget);
     expect(find.text('Permisos de este teléfono'), findsOneWidget);
     expect(find.text('Aceptar y continuar'), findsNothing);
     expect(calls.where((x) => x == 'schoolParticipation').length, 1);
@@ -455,7 +465,7 @@ void main() {
       expect(calls.where((v) => v == 'schoolPermission').length, 1);
       expect(calls, contains('schoolStartSensors'));
       expect(find.byKey(const ValueKey('permission-location')), findsNothing);
-      expect(find.text('Concedido'), findsOneWidget);
+      expect(find.text('Activo'), findsOneWidget);
       expect(find.text('Iniciar sensores autorizados'), findsNothing);
     },
   );
@@ -622,5 +632,11 @@ void main() {
     final plain = parseInvitation('  abc123 ', 'https://otro');
     expect(plain.token, 'abc123');
     expect(plain.server, 'https://otro');
+  });
+
+  test('phone numbers in help resources become callable', () {
+    expect(phoneIn('Línea 113, opción 5'), '113');
+    expect(phoneIn('Llama al 0800-10828 gratis'), '080010828');
+    expect(phoneIn('Escríbenos por la web'), isNull);
   });
 }

@@ -103,7 +103,7 @@ List<SetupStep> setupSteps(Map status, Map device) {
         'No vemos mensajes, fotos, llamadas ni lo que escribes.',
       ],
       how:
-          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
+          'Se abrirá una lista de Ajustes. Busca "Acompaña Escolar", tócala y activa el interruptor. Luego vuelve con la flecha de atrás. Android muestra un aviso general que dice que la app podría ver qué apps usas: es el texto estándar de este permiso. Acompaña Escolar solo cuenta cuándo se enciende y se apaga la pantalla y no guarda nombres de apps.${{'xiaomi': ' En Xiaomi la lista se llama "Acceso a datos de uso".', 'samsung': ' En Samsung la lista se llama "Acceso a datos de uso".', 'huawei': ' En Huawei la lista se llama "Acceso al uso de apps".', 'honor': ' En Honor la lista se llama "Acceso al uso de apps".'}[brand] ?? ''}',
     ),
     const SetupStep(
       kind: 'location',
@@ -139,7 +139,7 @@ List<SetupStep> setupSteps(Map status, Map device) {
           'Lo mismo que antes: solo resúmenes. Verás una notificación fija mientras esté activo y puedes pausarlo cuando quieras.',
         ],
         how:
-            'Se abrirán los Ajustes de la app. Entra a "Permisos" → "Ubicación" y elige ${brand == 'xiaomi' ? '"Permitir siempre"' : '"Permitir todo el tiempo"'}. Luego vuelve con la flecha de atrás.',
+            'Al tocar "Abrir ajustes" se abrirá la pantalla de ubicación de la app (Android ya no permite pedirlo con una ventana). Elige ${brand == 'xiaomi' ? '"Permitir siempre"' : '"Permitir todo el tiempo"'}. Luego vuelve con la flecha de atrás.',
       ),
     );
   }
@@ -168,7 +168,8 @@ List<SetupStep> setupSteps(Map status, Map device) {
         'Android "duerme" las apps que no abres seguido. Si pasa, los datos dejan de enviarse.',
       ],
       notSeen: const [
-        'La app usa poca batería: revisa la ubicación cada 15 minutos y envía datos en grupo.',
+        'Este ajuste no da acceso a nada nuevo: no vemos tu batería, tus apps ni tus datos.',
+        'Solo evita que Android cierre la app. Usa poca batería: revisa la ubicación cada 15 minutos y envía datos en grupo.',
       ],
       how:
           'Toca "Quitar restricción" y elige "Permitir".${{'samsung': ' Si no aparece la ventana: Ajustes → Aplicaciones → Acompaña Escolar → Batería → "Sin restricciones".', 'xiaomi': ' Si no aparece: Ajustes → Aplicaciones → Acompaña Escolar → Ahorro de batería → "Sin restricciones".', 'huawei': ' Si no aparece: Ajustes → Batería → Inicio de aplicaciones → Acompaña Escolar → "Administrar manualmente" y activa las tres opciones.', 'honor': ' Si no aparece: Ajustes → Batería → Inicio de aplicaciones → Acompaña Escolar → "Administrar manualmente".', 'oppo': ' Si no aparece: Ajustes → Batería → Acompaña Escolar → "Permitir actividad en segundo plano".', 'realme': ' Si no aparece: Ajustes → Batería → Acompaña Escolar → "Permitir actividad en segundo plano".'}[brand] ?? ''}',
@@ -235,11 +236,13 @@ Color stateColor(BuildContext context, String state) => switch (state) {
 
 /// Mensaje claro para cada resultado devuelto por Android.
 String resultMessage(String? state, SetupStep step) => switch (state) {
-  'granted' => '¡Listo! ${step.title} quedó activo.',
+  'granted' => '¡Listo! Este paso ya está activo.',
   'denied' =>
     'No se activó. No pasa nada: puedes intentarlo otra vez o seguir sin esto.',
   'blocked' =>
-    'Android ya no muestra la ventana porque antes se rechazó. Toca "Abrir ajustes", entra a "Permisos" y activa ${step.title.toLowerCase()}.',
+    step.kind == 'notifications'
+        ? 'Android ya no muestra la ventana porque antes se rechazó. Toca "Abrir ajustes", entra a "Notificaciones" y activa "Permitir notificaciones".'
+        : 'Android ya no muestra la ventana porque antes se rechazó. Toca "Abrir ajustes", entra a "Permisos" y activa ${step.title.toLowerCase()}.',
   'approximate' =>
     'Elegiste ubicación aproximada. Con ella no se pueden calcular recorridos. Toca "Usar ubicación precisa" y activa "Ubicación precisa".',
   'settings_opened' =>
@@ -435,7 +438,7 @@ class _PermissionGuideState extends State<PermissionGuide>
       ),
       const SizedBox(height: 14),
       Text(
-        'Son $count pasos cortos (unos 3 minutos). En cada uno te explicamos para qué sirve y qué NO vemos.',
+        'Son unos pocos pasos cortos (unos 3 minutos). En cada uno te explicamos para qué sirve y qué NO vemos.',
         textAlign: TextAlign.center,
       ),
       const SizedBox(height: 18),
@@ -476,6 +479,9 @@ class _PermissionGuideState extends State<PermissionGuide>
       primary = () => run(s);
     } else if (s.kind == 'battery') {
       primaryLabel = 'Quitar restricción';
+      primary = () => run(s);
+    } else if (s.kind == 'background') {
+      primaryLabel = 'Abrir ajustes';
       primary = () => run(s);
     } else if (state == 'approximate') {
       primaryLabel = 'Usar ubicación precisa';

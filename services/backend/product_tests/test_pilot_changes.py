@@ -46,7 +46,7 @@ def test_eleven_opens_review(client):
     assert any(r['kind'] == 'questionnaire_review' for r in rows[0]['reasons'])
 
 
-def test_checkins_are_optional_due_and_never_open_cases(client):
+def test_checkins_are_optional_due_and_never_open_cases(client, monkeypatch):
     c = client
     inv, cfg = setup(c)
     phone = enroll(c, inv)
@@ -67,22 +67,34 @@ def test_checkins_are_optional_due_and_never_open_cases(client):
     c.headers['authorization'] = token
     me = c.get(A + '/me').json()
     assert me['school_zone']['radius_m'] == 150 and me['school_zone']['days'] == [0, 1, 2, 3, 4]
+    # Con el PHQ-9 pendiente se muestra solo él: nada de cuestionarios encadenados.
+    assert [f['instrument_id'] for f in c.get(A + '/me/questionnaires').json()] == ['PHQ9_ES_AETC_2016']
+    zeros = {f'q{i}': 0 for i in range(1, 10)}
+    post(c, '/me/questionnaires', phq(zeros))
     forms = c.get(A + '/me/questionnaires').json()
-    codes = [f['instrument_id'] for f in forms]
-    assert codes == ['PHQ9_ES_AETC_2016', 'PHQ2_SEMANAL', 'CONTACTO_DIARIO', 'CONTEXTO_MENSUAL']
-    daily = forms[2]
+    # El PHQ-2 no se ofrece en la semana posterior a un PHQ-9 (repetiría los ítems 1 y 2).
+    assert [f['instrument_id'] for f in forms] == ['CONTACTO_DIARIO', 'CONTEXTO_MENSUAL']
+    from app.checkins import CHECKINS
+    phq2_version = CHECKINS['PHQ2_SEMANAL']['version']
     now = datetime.now(timezone.utc).isoformat()
+    post(c, '/me/check-ins', {'instrument_code': 'PHQ2_SEMANAL', 'instrument_version': phq2_version, 'answers': {'q1': 3, 'q2': 3}, 'applied_at': now}, code=409)
+    daily = forms[0]
     bad = {'instrument_code': 'CONTACTO_DIARIO', 'instrument_version': daily['version'], 'answers': {'social': 9}, 'applied_at': now}
     post(c, '/me/check-ins', bad, code=422)
     ok = {**bad, 'answers': {'social': 1}}
     post(c, '/me/check-ins', ok)
     post(c, '/me/check-ins', ok, code=409)
-    ctx = forms[3]
+    ctx = forms[1]
     answers = {q['id']: q['options'][-1]['value'] for q in ctx['questions']}
     post(c, '/me/check-ins', {'instrument_code': 'CONTEXTO_MENSUAL', 'instrument_version': ctx['version'], 'answers': answers, 'applied_at': now})
-    post(c, '/me/check-ins', {'instrument_code': 'PHQ2_SEMANAL', 'instrument_version': forms[1]['version'], 'answers': {'q1': 3, 'q2': 3}, 'applied_at': now})
-    codes = [f['instrument_id'] for f in c.get(A + '/me/questionnaires').json()]
-    assert codes == ['PHQ9_ES_AETC_2016']
+    assert c.get(A + '/me/questionnaires').json() == []
+    # Una semana después del PHQ-9 sí corresponde el PHQ-2 (se adelanta el reloj del módulo).
+    import app.checkins as checkins
+    later = datetime.now(timezone.utc) + timedelta(days=7)
+    monkeypatch.setattr(checkins, 'now', lambda: later)
+    assert [f['instrument_id'] for f in c.get(A + '/me/questionnaires').json() if f['instrument_id'] == 'PHQ2_SEMANAL'] == ['PHQ2_SEMANAL']
+    post(c, '/me/check-ins', {'instrument_code': 'PHQ2_SEMANAL', 'instrument_version': phq2_version, 'answers': {'q1': 3, 'q2': 3}, 'applied_at': later.isoformat()})
+    monkeypatch.undo()
     login(c, 'psicologo')
     assert c.get(A + '/cases').json() == []
     pid = inv['student']['participant_id']

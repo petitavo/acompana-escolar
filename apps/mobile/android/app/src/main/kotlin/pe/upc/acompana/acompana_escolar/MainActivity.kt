@@ -108,6 +108,14 @@ class MainActivity:FlutterActivity(){
                 permissionResult(result,DeviceSetup.openBattery(this))
             }else if(call.method=="schoolOpenAutostart"){
                 permissionResult(result,DeviceSetup.openAutostart(this))
+            }else if(call.method=="schoolDial"){
+                // ACTION_DIAL solo abre el marcador con el número: no llama ni requiere permiso.
+                val number=(call.argument<String>("number")?:"").filter{it.isDigit()||it=='+'}
+                if(number.isEmpty()){result.error("NO_NUMBER","Número inválido",null)}
+                else{
+                    try{startActivity(Intent(Intent.ACTION_DIAL,Uri.parse("tel:$number")));result.success("{}")}
+                    catch(e:Exception){result.error("NO_DIALER","Este teléfono no tiene marcador",null)}
+                }
             }else if(call.method=="schoolOpenSettings"){
                 startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName")))
                 permissionResult(result,"settings_opened")

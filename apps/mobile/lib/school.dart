@@ -64,6 +64,12 @@ String friendlyDate(dynamic value, {bool time = true}) {
   return '$date, ${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }
 
+/// Primer número telefónico de un texto (113, 0800-10828, +51 1 2345678…).
+String? phoneIn(String text) {
+  final m = RegExp(r'\+?\d[\d\s-]{1,14}\d').firstMatch(text);
+  return m?.group(0)?.replaceAll(RegExp(r'[\s-]'), '');
+}
+
 const requestStates = {
   'new': 'Recibida, el equipo aún no la revisa',
   'acknowledged': 'El equipo ya la vio',
@@ -430,6 +436,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     final firstConsent =
         method == 'schoolParticipation' &&
         home['authorization']?['student'] != true;
+    var openGuideAfter = false;
     try {
       final v = await call(method, args);
       if (v is Map && mounted) {
@@ -471,13 +478,12 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             curve: Curves.easeOut,
           );
         }
-        // Después de aceptar por primera vez, la guía de permisos se abre sola.
-        if (firstConsent &&
+        // Después de aceptar por primera vez, la guía de permisos se abre sola
+        // (más abajo, cuando busy ya es falso; si no, la guía no puede pedir nada).
+        openGuideAfter =
+            firstConsent &&
             decisionState == 'confirmed' &&
-            home['authorization']?['ready'] == true &&
-            mounted) {
-          await openGuide();
-        }
+            home['authorization']?['ready'] == true;
       }
     } on PlatformException catch (e) {
       if (mounted) {
@@ -490,6 +496,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     } finally {
       if (mounted) setState(() => busy = false);
     }
+    if (openGuideAfter && mounted) await openGuide();
   }
 
   Future<void> ensureSensors({bool reconfigure = false}) async {
@@ -680,6 +687,69 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     }
   }
 
+  bool get supportOpen => (requests['requests'] ?? []).any(
+    (r) => r is Map && r['state'] != 'closed',
+  );
+
+  Future<void> requestSupport() async {
+    if (supportOpen) {
+      setState(
+        () => message =
+            'Ya tienes una solicitud abierta. El equipo te contactará; puedes ver su estado en Solicitudes.',
+      );
+      return;
+    }
+    final yes = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('¿Quieres que el equipo te contacte?'),
+        content: const Text(
+          'El equipo de psicología de tu colegio recibirá tu pedido y te buscará en su horario de atención. No necesitas explicar el motivo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c, false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(c, true),
+            child: const Text('Sí, que me contacten'),
+          ),
+        ],
+      ),
+    );
+    if (yes == true) await action('schoolSupport');
+  }
+
+  /// Abre el marcador del teléfono con el número (no llama solo).
+  Future<void> dial(String number) async {
+    try {
+      await call('schoolDial', {'number': number});
+    } catch (_) {
+      if (mounted) setState(() => message = 'Marca $number desde tu teléfono.');
+    }
+  }
+
+  Widget resourceLine(Map r) {
+    final number = phoneIn('${r['contact'] ?? ''}');
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.call_outlined, size: 20, color: brandColor),
+          const SizedBox(width: 10),
+          Expanded(child: Text('${r['title']}\n${r['contact']}')),
+          if (number != null)
+            TextButton(
+              onPressed: () => dial(number),
+              child: Text('Llamar', semanticsLabel: 'Llamar al $number'),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> decision(String act) async {
     await action('schoolParticipation', {
       'body': jsonEncode({
@@ -785,7 +855,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 unsupported
                     ? 'No disponible en este teléfono'
                     : ready
-                    ? 'Concedido'
+                    ? 'Activo'
                     : stateLabels[state] ?? state,
                 style: TextStyle(color: stateColor(context, state)),
               ),
@@ -804,6 +874,8 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                       child: Text(
                         state == 'approximate'
                             ? 'Usar precisa'
+                            : s.kind == 'background' && state == 'pending'
+                            ? 'Ajustes'
                             : state == 'off'
                             ? 'Activar'
                             : 'Permitir',
@@ -870,18 +942,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         const Text(
           'La app no reemplaza una atención de emergencia ni atiende las 24 horas.',
         ),
-        for (final r in c['resources'] ?? [])
-          Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.call_outlined, size: 20, color: brandColor),
-                const SizedBox(width: 10),
-                Expanded(child: Text('${r['title']}\n${r['contact']}')),
-              ],
-            ),
-          ),
+        for (final r in c['resources'] ?? []) resourceLine(r),
       ],
       leading: const Icon(Icons.support_agent, color: brandColor),
     );
@@ -923,8 +984,17 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         context: context,
         builder: (dialog) => AlertDialog(
           title: const Text('Gracias por contarlo'),
-          content: Text(
-            'Una persona del equipo de psicología revisará tu respuesta. Si sientes que podrías hacerte daño ahora mismo, no esperes: busca a un adulto de confianza o comunícate con:\n\n${[for (final r in c['resources'] ?? []) '${r['title']}: ${r['contact']}'].join('\n')}',
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Una persona del equipo de psicología revisará tu respuesta. Si sientes que podrías hacerte daño ahora mismo, no esperes: busca a un adulto de confianza o comunícate con:',
+                ),
+                for (final r in c['resources'] ?? []) resourceLine(r),
+              ],
+            ),
           ),
           actions: [
             FilledButton(
@@ -1242,7 +1312,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                   ),
                   button(
                     'Quiero que me contacten',
-                    () => action('schoolSupport'),
+                    requestSupport,
                     secondary: true,
                   ),
                 ],
@@ -1276,7 +1346,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     ),
                     button(
                       'Quiero que me contacten',
-                      () => action('schoolSupport'),
+                      requestSupport,
                       secondary: true,
                     ),
                   ],
@@ -1291,7 +1361,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 ),
                 button(
                   'Quiero que me contacten',
-                  () => action('schoolSupport'),
+                  requestSupport,
                 ),
                 for (final r in requests['requests'] ?? [])
                   ListTile(
@@ -1515,7 +1585,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
               : null,
         ),
       ]),
-      card('Retirar mi participación', [
+      if (auth['student'] == true) card('Retirar mi participación', [
         const Text(
           'Se detiene la captura y se pide borrar tus datos. Si no hay internet, la captura se detiene igual y el retiro se envía después.',
         ),
