@@ -173,3 +173,13 @@ class Prediction(Row, Base):
     cutoff: Mapped[str] = mapped_column(String(10))
     detail: Mapped[dict] = mapped_column(JSON)
     __table_args__ = (UniqueConstraint("model_id", "participant_id", "cutoff"),)
+
+
+class CheckIn(Row, Base):
+    """Cuestionarios breves del piloto (PHQ-2 semanal, pregunta diaria de contacto social,
+    preguntas de contexto). Tabla separada para no mezclarlos con las etiquetas PHQ-9."""
+    __tablename__ = "school_checkins"
+    participant_id: Mapped[str] = mapped_column(ForeignKey("participants.id"), index=True)
+    code: Mapped[str] = mapped_column(String(40), index=True)
+    applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    detail: Mapped[dict] = mapped_column(JSON)

@@ -7,7 +7,7 @@ class MobilityMathTest {
         val cases=JSONArray(java.io.File("../../../../packages/contracts/fixtures/mobility-v1.json").readText())
         for(i in 0 until cases.length()){
             val c=cases.getJSONObject(i);val rows=c.getJSONArray("samples")
-            val result=MobilityMath.summary((0 until rows.length()).map{rows.getJSONObject(it)},c.getString("day"),c.getString("zone"),c.optJSONObject("home"))
+            val result=MobilityMath.summary((0 until rows.length()).map{rows.getJSONObject(it)},c.getString("day"),c.getString("zone"),c.optJSONObject("home"),null,c.optJSONObject("school"))
             val expected=c.getJSONObject("expected")
             for(key in listOf("features","quality"))compare(c.getString("name")+"."+key,expected.getJSONObject(key),result.getJSONObject(key))
         }

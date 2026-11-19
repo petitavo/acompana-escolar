@@ -8,9 +8,12 @@ from datetime import datetime, date, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 from .db import utc
 
-VERSION = "mobility-v1.0"
+VERSION = "mobility-v1.1"
+LEGACY_VERSIONS = {"mobility-v1.0"}
 PARAMETERS = {"max_accuracy_m": 100, "max_age_ms": 600000, "max_gap_minutes": 30, "max_speed_kmh": 200, "home_radius_m": 150, "dbscan_eps_m": 200, "dbscan_min_samples": 3, "minimum_observed_minutes": 120}
-FEATURES = {"observed_distance_m": ("m", 200), "radius_gyration_m": ("m", 100), "home_minutes": ("min", 30), "place_entropy": ("nats", 0.1), "observed_steps": ("pasos", 100)}
+FEATURES = {"observed_distance_m": ("m", 200), "radius_gyration_m": ("m", 100), "home_minutes": ("min", 30), "place_entropy": ("nats", 0.1), "observed_steps": ("pasos", 100), "school_minutes": ("min", 30)}
+# mobility-v1.0 no tenía asistencia; se sigue aceptando de teléfonos sin actualizar.
+LEGACY_FEATURES = [k for k in FEATURES if k != "school_minutes"]
 
 
 def haversine(a, b):
@@ -46,7 +49,16 @@ def clusters(points):
     return labels
 
 
-def day_summary(samples, day, zone="America/Lima", home=None, cutoff=None):
+def school_window(school, d, tz):
+    """Horario de clases del día (UTC) si el día es lectivo; None en fines de semana o sin zona."""
+    if not school or d.weekday() not in school.get("days", [0, 1, 2, 3, 4]):
+        return None
+    a = datetime.combine(d, time.fromisoformat(school.get("start", "07:30")), tz).astimezone(timezone.utc)
+    b = datetime.combine(d, time.fromisoformat(school.get("end", "13:30")), tz).astimezone(timezone.utc)
+    return (a, b) if b > a else None
+
+
+def day_summary(samples, day, zone="America/Lima", home=None, cutoff=None, school=None):
     d = date.fromisoformat(day)
     tz = ZoneInfo(zone)
     start = datetime.combine(d, time.min, tz).astimezone(timezone.utc)
@@ -67,6 +79,8 @@ def day_summary(samples, day, zone="America/Lima", home=None, cutoff=None):
     weights = [0.0] * len(points)
     distance, observed, inside, outside, gaps = 0.0, 0.0, 0.0, 0.0, 0
     segments = []
+    class_hours = school_window(school, d, tz)
+    school_observed, school_inside = 0.0, 0.0
     for i, (a, b) in enumerate(zip(points, points[1:])):
         ta, tb = utc(a["occurred_at"]), utc(b["occurred_at"])
         gap = (tb - ta).total_seconds() / 60
@@ -90,6 +104,13 @@ def day_summary(samples, day, zone="America/Lima", home=None, cutoff=None):
         weights[i] += clipped / 2
         weights[i + 1] += clipped / 2
         segments.append((i, i + 1, clipped))
+        if class_hours:
+            ws, we = class_hours
+            within = max(0, (min(tb, we, effective_end) - max(ta, ws)).total_seconds() / 60)
+            if within > 0:
+                school_observed += within
+                if all(haversine((v["latitude"], v["longitude"]), (school["latitude"], school["longitude"])) <= school.get("radius_m", 150) for v in (a, b)):
+                    school_inside += within
         if home:
             radius = home.get("radius_m", 150)
             at_home = [haversine((v["latitude"], v["longitude"]), (home["latitude"], home["longitude"])) <= radius for v in (a, b)]
@@ -126,11 +147,20 @@ def day_summary(samples, day, zone="America/Lima", home=None, cutoff=None):
         step_count += b["counter"] - a["counter"]
         step_minutes += gap
     coverage = min(1, observed / duration) if duration else 0
-    values = {"observed_distance_m": distance if observed else None, "radius_gyration_m": radius, "home_minutes": inside if home and observed else None, "place_entropy": entropy, "observed_steps": step_count if step_minutes else None}
+    values = {"observed_distance_m": distance if observed else None, "radius_gyration_m": radius, "home_minutes": inside if home and observed else None, "place_entropy": entropy, "observed_steps": step_count if step_minutes else None, "school_minutes": school_inside if class_hours and school_observed else None}
+    class_minutes = (class_hours[1] - class_hours[0]).total_seconds() / 60 if class_hours else 0
     features = {}
     for name, value in values.items():
-        minutes = step_minutes if name == "observed_steps" else observed
-        cov = min(1, minutes / duration) if duration else 0
-        eligible = value is not None and cov >= 0.8 and cutoff >= end
+        if name == "school_minutes":
+            # Asistencia: basta con observar la mitad del horario de clases (el GPS falla bajo techo).
+            # La cobertura se expresa sobre el día, como las demás variables; la elegibilidad
+            # se decide sobre el horario de clases.
+            minutes = school_observed
+            cov = min(1, minutes / duration) if duration else 0
+            eligible = value is not None and bool(class_minutes) and minutes >= 0.5 * class_minutes and cutoff >= end
+        else:
+            minutes = step_minutes if name == "observed_steps" else observed
+            cov = min(1, minutes / duration) if duration else 0
+            eligible = value is not None and cov >= 0.8 and cutoff >= end
         features[name] = {"value": round(value, 4) if value is not None else None, "unit": FEATURES[name][0], "state": "missing" if value is None else "observed" if eligible else "partial", "eligible": eligible, "operational_coverage": round(cov, 4), "observed_minutes": round(minutes, 3), "window_start": start.isoformat(), "window_end": end.isoformat()}
-    return {"version": VERSION, "day": day, "features": features, "quality": {"observed_minutes": round(observed, 3), "gap_count": gaps, "excluded_count": len(excluded), "step_resets": resets, "inside_minutes": round(inside, 3) if home and observed else None, "outside_minutes": round(outside, 3) if home and observed else None, "uncertain_minutes": round(max(0, duration - inside - outside), 3), "period_minutes": duration, "cluster_observed_minutes": round(dwell_total, 3)}, "lineage": {"point_ids": [p.get("id") for p in rows], "excluded": excluded, "parameters": PARAMETERS}, "notice": "Estimaciones del tiempo y trayectos observados con el teléfono; las brechas no se rellenan. No mide aislamiento, sueño ni actividad física total."}
+    return {"version": VERSION, "day": day, "features": features, "quality": {"observed_minutes": round(observed, 3), "gap_count": gaps, "excluded_count": len(excluded), "step_resets": resets, "inside_minutes": round(inside, 3) if home and observed else None, "outside_minutes": round(outside, 3) if home and observed else None, "uncertain_minutes": round(max(0, duration - inside - outside), 3), "period_minutes": duration, "cluster_observed_minutes": round(dwell_total, 3), "school_observed_minutes": round(school_observed, 3) if class_hours else None}, "lineage": {"point_ids": [p.get("id") for p in rows], "excluded": excluded, "parameters": PARAMETERS}, "notice": "Estimaciones del tiempo y trayectos observados con el teléfono; las brechas no se rellenan. No mide aislamiento, sueño ni actividad física total. La asistencia es el tiempo observado dentro de la zona del colegio en horario de clases."}

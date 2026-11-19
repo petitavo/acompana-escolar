@@ -4013,6 +4013,63 @@
           }
         }
       }
+    },
+    "/api/v1/school/me/check-ins": {
+      "post": {
+        "tags": [
+          "Cuestionarios breves"
+        ],
+        "summary": "Answer",
+        "operationId": "answer_api_v1_school_me_check_ins_post",
+        "parameters": [
+          {
+            "name": "idempotency-key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckInAnswer"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4305,6 +4362,76 @@
         ],
         "title": "CaptureInput"
       },
+      "CheckInAnswer": {
+        "properties": {
+          "instrument_code": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Instrument Code"
+          },
+          "instrument_version": {
+            "type": "string",
+            "maxLength": 40,
+            "title": "Instrument Version"
+          },
+          "answers": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Answers"
+          },
+          "applied_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Applied At"
+          },
+          "recall_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recall Start"
+          },
+          "recall_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recall End"
+          },
+          "functioning": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Functioning"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "instrument_code",
+          "instrument_version",
+          "answers",
+          "applied_at"
+        ],
+        "title": "CheckInAnswer"
+      },
       "ClassroomInput": {
         "properties": {
           "name": {
@@ -4457,11 +4584,15 @@
                 "radius_gyration_m",
                 "home_minutes",
                 "place_entropy",
-                "observed_steps"
+                "observed_steps",
+                "school_minutes",
+                "sleep_duration_min",
+                "sleep_onset_min",
+                "wake_min"
               ]
             },
             "type": "array",
-            "maxItems": 9,
+            "maxItems": 13,
             "minItems": 1,
             "title": "Features"
           },
@@ -5098,6 +5229,19 @@
             "maximum": 1500.0,
             "minimum": 0.0,
             "title": "Cluster Observed Minutes"
+          },
+          "school_observed_minutes": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1500.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "School Observed Minutes"
           }
         },
         "additionalProperties": false,
@@ -5461,7 +5605,7 @@
           },
           "instrument_version": {
             "type": "string",
-            "const": "AETC-2016-es-1",
+            "const": "AETC-2016-es-2",
             "title": "Instrument Version"
           },
           "answers": {
@@ -5511,6 +5655,36 @@
           "recall_end"
         ],
         "title": "SchoolAnswer"
+      },
+      "SchoolZone": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
+            "title": "Longitude"
+          },
+          "radius_m": {
+            "type": "integer",
+            "maximum": 1000.0,
+            "minimum": 50.0,
+            "title": "Radius M",
+            "default": 150
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "title": "SchoolZone"
       },
       "SensorBatch": {
         "properties": {
@@ -5854,6 +6028,64 @@
             "minimum": 20.0,
             "title": "Location Distance Meters",
             "default": 100
+          },
+          "phq2_weekly_enabled": {
+            "type": "boolean",
+            "title": "Phq2 Weekly Enabled",
+            "default": false
+          },
+          "daily_social_enabled": {
+            "type": "boolean",
+            "title": "Daily Social Enabled",
+            "default": false
+          },
+          "context_questions_enabled": {
+            "type": "boolean",
+            "title": "Context Questions Enabled",
+            "default": false
+          },
+          "behavior_change_alerts": {
+            "type": "boolean",
+            "title": "Behavior Change Alerts",
+            "default": false
+          },
+          "school_zone": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SchoolZone"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "school_days": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "School Days",
+            "default": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ]
+          },
+          "school_start": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "School Start",
+            "default": "07:30"
+          },
+          "school_end": {
+            "type": "string",
+            "pattern": "^(?:[01]\\d|2[0-3]):[0-5]\\d$",
+            "title": "School End",
+            "default": "13:30"
           }
         },
         "additionalProperties": false,
@@ -6032,13 +6264,19 @@
           "invitation": {
             "type": "string",
             "maxLength": 200,
-            "minLength": 16,
+            "minLength": 8,
             "title": "Invitation"
           },
           "verification_code": {
-            "type": "string",
-            "maxLength": 30,
-            "minLength": 6,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Verification Code"
           },
           "device": {
@@ -6049,7 +6287,6 @@
         "type": "object",
         "required": [
           "invitation",
-          "verification_code",
           "device"
         ],
         "title": "VerifyEnrollment"

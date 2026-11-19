@@ -3,7 +3,7 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select, delete
 from app.db import Device, Feature, Job, Idempotency, Evaluation, now, utc
 from app.school_db import SensorPoint, MobilityDay, StudentProfile, Institution, ModelRecord, TrainingSchedule, Prediction
-from app.school_core import settings, authorization_status, analysis_cutoff
+from app.school_core import settings, authorization_status, analysis_cutoff, school_zone
 from app.mobility import day_summary, VERSION
 from app.config import FEATURE_RETENTION_DAYS
 
@@ -31,7 +31,8 @@ def process_mobility(db, job):
         evaluate_mobility(db, d, day)
         return {"source": "android_local_summary"}
     points = [r.detail for r in db.scalars(select(SensorPoint).where(SensorPoint.device_id == d.id, SensorPoint.occurred_at >= utc(day + "T00:00:00Z") - timedelta(days=1), SensorPoint.occurred_at <= utc(day + "T00:00:00Z") + timedelta(days=2)))]
-    result = day_summary(points, day, d.detail.get("timezone", "America/Lima"), p.policy.get("home_zone"), now())
+    school = school_zone(settings(db.get(Institution, p.institution_id)))
+    result = day_summary(points, day, d.detail.get("timezone", "America/Lima"), p.policy.get("home_zone"), now(), school)
     result["source"] = "server_authorized_raw"
     db.add(MobilityDay(device_id=d.id, day=day, version=VERSION, detail=result))
     db.flush()

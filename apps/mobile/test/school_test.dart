@@ -15,6 +15,8 @@ void main() {
   String permissionState = 'granted';
   bool locationGranted = false, sensorRunning = false, policyPending = false;
   bool stepsGranted = false;
+  String locationMode = 'precise';
+  final deviceInfo = <String, dynamic>{};
   final starts = <dynamic>[];
   List<Map<String, dynamic>> deliveryLog = [];
   final home = {
@@ -52,6 +54,8 @@ void main() {
     },
   };
   setUpAll(() async {
+    // Fuentes de los goldens: solo existen en Linux (CI).
+    if (!Platform.isLinux) return;
     final font = FontLoader('Roboto');
     font.addFont(
       Future.value(
@@ -81,6 +85,8 @@ void main() {
     permissionState = 'granted';
     locationGranted = false;
     stepsGranted = false;
+    locationMode = 'precise';
+    deviceInfo.clear();
     starts.clear();
     sensorRunning = false;
     policyPending = false;
@@ -92,7 +98,8 @@ void main() {
       'steps': false,
       'reminders': true,
     });
-    home['capture_active'] = false;
+    // Ya aceptó: lo normal es que este teléfono esté participando.
+    home['capture_active'] = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('pe.upc.acompana/collector'),
@@ -107,7 +114,7 @@ void main() {
                   'steps_supported': true,
                   'steps_permission': stepsGranted,
                   'location_permission': locationGranted
-                      ? 'approximate'
+                      ? locationMode
                       : 'missing',
                   'sensor_running': sensorRunning,
                   'policy_pending': policyPending,
@@ -143,7 +150,7 @@ void main() {
                   'steps_supported': true,
                   'steps_permission': stepsGranted,
                   'location_permission': locationGranted
-                      ? 'approximate'
+                      ? locationMode
                       : 'missing',
                 });
               case 'schoolPermission':
@@ -182,6 +189,11 @@ void main() {
                   'decision_state': 'confirmed',
                   'home': home,
                 });
+              case 'schoolDeviceSetup':
+                return jsonEncode(deviceInfo);
+              case 'schoolOpenBattery':
+                deviceInfo['battery_unrestricted'] = true;
+                return '{"state":"granted"}';
               case 'schoolSupport':
                 return '{"enrolled":true,"outbox_pending":1}';
               default:
@@ -196,10 +208,13 @@ void main() {
       await t.binding.setSurfaceSize(const Size(390, 844));
       await t.pumpWidget(const SchoolApp());
       await t.pumpAndSettle();
-      expect(find.text('Ingresa con tu invitación'), findsOneWidget);
+      expect(
+        find.text('Escribe el código que te dio tu colegio.'),
+        findsOneWidget,
+      );
       expect(find.text('LAB · prueba interna con adultos'), findsNothing);
-      expect(find.text('Código recibido por separado'), findsOneWidget);
-      await expectLater(
+      expect(find.byKey(const ValueKey('code-field')), findsOneWidget);
+      if (Platform.isLinux) await expectLater(
         find.byType(SchoolApp),
         matchesGoldenFile('goldens/product-onboarding.png'),
       );
@@ -213,16 +228,23 @@ void main() {
     await t.binding.setSurfaceSize(const Size(390, 844));
     await t.pumpWidget(const SchoolApp());
     await t.pumpAndSettle();
-    expect(find.text('Hola, Ana Ficticia'), findsOneWidget);
-    await expectLater(
+    expect(find.text('¡Hola, Ana!'), findsOneWidget);
+    expect(find.text('Tu camino'), findsOneWidget);
+    if (Platform.isLinux) await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-home.png'),
     );
+    await t.ensureVisible(find.text('Quiero que me contacten'));
+    await t.pumpAndSettle();
     await t.tap(find.text('Quiero que me contacten'));
+    await t.pumpAndSettle();
+    // Primero confirma, para no enviar pedidos por un toque accidental.
+    expect(calls, isNot(contains('schoolSupport')));
+    await t.tap(find.text('Sí, que me contacten'));
     await t.pumpAndSettle();
     expect(calls, contains('schoolSupport'));
     expect(
-      find.textContaining('el equipo todavía no los recibió'),
+      find.textContaining('Se enviará solo cuando haya internet'),
       findsOneWidget,
     );
     await t.binding.setSurfaceSize(null);
@@ -290,13 +312,36 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Cuestionario'));
     await t.pumpAndSettle();
+    // Una pregunta por pantalla, con la instrucción del instrumento a la vista.
     expect(find.text(instrument['recall']), findsOneWidget);
-    expect(find.byType(RadioListTile<int>), findsNWidgets(36));
-    expect(find.text('Enviar respuesta'), findsOneWidget);
-    await expectLater(
+    expect(find.text('Pregunta 1 de 9'), findsOneWidget);
+    expect(find.text(instrument['questions'][0]['text']), findsOneWidget);
+    for (final o in instrument['options']) {
+      expect(find.text(o['label']), findsOneWidget);
+    }
+    expect(find.text('Enviar respuesta'), findsNothing);
+    if (Platform.isLinux) await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-phq.png'),
     );
+    // Elegir "Varios días" en las 9 preguntas pasa solo a la siguiente; luego
+    // aparece la pregunta de dificultad y al final "Enviar respuesta".
+    for (var i = 0; i < 9; i++) {
+      expect(find.text(instrument['questions'][i]['text']), findsOneWidget);
+      final option = find.text(instrument['options'][1]['label']);
+      await t.ensureVisible(option);
+      await t.tap(option);
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+    }
+    expect(find.text(instrument['functioning']['text']), findsOneWidget);
+    final first = find.text(instrument['functioning']['options'][0]);
+    await t.ensureVisible(first);
+    await t.tap(first);
+    await t.pump(const Duration(milliseconds: 300));
+    await t.pumpAndSettle();
+    expect(find.text('¡Respondiste todo!'), findsOneWidget);
+    expect(find.text('Enviar respuesta'), findsOneWidget);
     await t.binding.setSurfaceSize(null);
   });
   testWidgets(
@@ -376,7 +421,7 @@ void main() {
       await t.tap(find.byKey(const ValueKey('permission-location')));
       await t.pumpAndSettle();
       expect(find.textContaining('Permiso no concedido.'), findsOneWidget);
-      await expectLater(
+      if (Platform.isLinux) await expectLater(
         find.byType(SchoolApp),
         matchesGoldenFile('goldens/product-participation.png'),
       );
@@ -398,6 +443,7 @@ void main() {
       home['capture_active'] = false;
     });
     auth.addAll({'student': false, 'ready': false});
+    home['capture_active'] = false;
     await t.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => t.binding.setSurfaceSize(null));
     await t.pumpWidget(const SchoolApp());
@@ -419,12 +465,30 @@ void main() {
     );
     await t.tap(find.text('Aceptar y continuar'));
     await t.pumpAndSettle();
-    expect(find.text('Participación guardada.'), findsOneWidget);
-    expect(find.text('Permisos de este teléfono'), findsOneWidget);
-    expect(find.text('Aceptar y continuar'), findsNothing);
-    expect(calls.where((x) => x == 'schoolParticipation').length, 1);
-    expect(calls, isNot(contains('schoolStartSensors')));
+    // Tras aceptar vuelve a Inicio: el paso 2 (preparar el teléfono) queda marcado
+    // y nada se abre solo.
+    expect(find.text('Tu camino'), findsOneWidget);
+    expect(find.textContaining('Sigue con el paso 2'), findsOneWidget);
+    expect(find.text('Activa los permisos'), findsNothing);
     expect(calls, isNot(contains('schoolPermission')));
+    // Desde Inicio, un botón abre la pantalla de permisos y otro los pide todos.
+    await t.tap(find.text('Activar permisos'));
+    await t.pumpAndSettle();
+    expect(find.text('Activa los permisos'), findsOneWidget);
+    expect(calls, isNot(contains('schoolPermission')));
+    await t.tap(find.byKey(const ValueKey('guide-main')));
+    await t.pumpAndSettle();
+    // Una sola vez al servidor (aceptar + guardar todo) y luego las ventanas seguidas.
+    expect(calls.where((x) => x == 'schoolParticipation').length, 2);
+    expect(calls.where((x) => x == 'schoolPermission').length, greaterThan(1));
+    expect(locationGranted, isTrue);
+    expect(stepsGranted, isTrue);
+    // Se detiene antes de "Ubicación siempre", que abre Ajustes, y dice qué tocar.
+    expect(find.textContaining('Permitir todo el tiempo'), findsOneWidget);
+    await t.pageBack();
+    await t.pumpAndSettle();
+    expect(find.text('Tu camino'), findsOneWidget);
+    expect(find.text('Aceptar y continuar'), findsNothing);
   });
   testWidgets(
     'one tap saves selection, requests Android and starts granted sensors',
@@ -441,7 +505,7 @@ void main() {
       expect(calls.where((v) => v == 'schoolPermission').length, 1);
       expect(calls, contains('schoolStartSensors'));
       expect(find.byKey(const ValueKey('permission-location')), findsNothing);
-      expect(find.text('Concedido'), findsOneWidget);
+      expect(find.text('Activo'), findsOneWidget);
       expect(find.text('Iniciar sensores autorizados'), findsNothing);
     },
   );
@@ -474,19 +538,23 @@ void main() {
     expect(calls.where((v) => v == 'schoolForms').length, greaterThan(before));
     expect(find.text('Cómo te has sentido'), findsOneWidget);
   });
-  testWidgets('granting a permission does not resume a paused participation', (
+  testWidgets('a stopped phone resumes by itself and offers no pause', (
     t,
   ) async {
+    // Código renovado o versión anterior que pausó: ya aceptó, así que sigue
+    // participando sin que el alumno tenga que tocar "Reanudar".
     enrolled = true;
+    home['capture_active'] = false;
     await t.pumpWidget(const SchoolApp());
     await t.pumpAndSettle();
+    expect(calls.where((c) => c == 'schoolParticipation').length, 1);
+    expect(home['capture_active'], isTrue);
     await t.tap(find.text('Participación'));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('permission-location')));
-    await t.pumpAndSettle();
-    expect(calls, contains('schoolPermission'));
-    expect(calls, isNot(contains('schoolStartSensors')));
-    expect(find.text('Participación pausada'), findsOneWidget);
+    expect(find.text('Participación pausada'), findsNothing);
+    expect(find.text('Pausar'), findsNothing);
+    expect(find.text('Reanudar'), findsNothing);
+    expect(calls.where((c) => c == 'schoolParticipation').length, 1);
   });
   testWidgets(
     'new step permission refreshes an already running location service',
@@ -534,4 +602,140 @@ void main() {
       expect(find.byKey(const ValueKey('permission-steps')), findsNothing);
     },
   );
+
+  testWidgets('guide explains each step and offers settings when blocked', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    permissionState = 'blocked';
+    await t.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    await t.ensureVisible(find.text('Activar permisos'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Activar permisos'));
+    await t.pumpAndSettle();
+    expect(find.text('Activa los permisos'), findsOneWidget);
+    expect(find.text('Uso de pantalla'), findsOneWidget);
+    if (Platform.isLinux) await expectLater(
+      find.byType(SchoolApp),
+      matchesGoldenFile('goldens/product-guide.png'),
+    );
+    await t.tap(find.byKey(const ValueKey('guide-main')));
+    await t.pumpAndSettle();
+    expect(calls, contains('schoolPermission'));
+    // Lo que Android ya no deja pedir queda marcado y se abre Ajustes al tocarlo.
+    expect(find.textContaining('Bloqueado'), findsWidgets);
+    await t.tap(find.byKey(const ValueKey('guide-row-location')));
+    await t.pumpAndSettle();
+    expect(calls, contains('schoolOpenSettings'));
+    expect(calls, isNot(contains('schoolStartSensors')));
+  });
+
+  testWidgets('approximate location asks for precise location for attendance', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    (home['policy'] as Map)['location'] = true;
+    locationGranted = true;
+    locationMode = 'approximate';
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.text('Solo aproximada'), findsOneWidget);
+    expect(find.text('Usar precisa'), findsOneWidget);
+  });
+
+  testWidgets('autostart step only appears on brands that need it', (t) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    deviceInfo.addAll({'manufacturer': 'xiaomi', 'autostart_screen': true});
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('permission-autostart')), findsOneWidget);
+    deviceInfo
+      ..clear()
+      ..addAll({'manufacturer': 'samsung'});
+    await t.pumpWidget(const SizedBox());
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    expect(find.byKey(const ValueKey('permission-autostart')), findsNothing);
+  });
+
+  test('invitation link or plain code are both accepted', () {
+    final link = parseInvitation('https://x.pe/app?inv=abc123', 'https://otro');
+    expect(link.token, 'abc123');
+    expect(link.server, 'https://x.pe');
+    final plain = parseInvitation('  abc123 ', 'https://otro');
+    expect(plain.token, 'abc123');
+    expect(plain.server, 'https://otro');
+  });
+
+  test('phone numbers in help resources become callable', () {
+    expect(phoneIn('Línea 113, opción 5'), '113');
+    expect(phoneIn('Llama al 0800-10828 gratis'), '080010828');
+    expect(phoneIn('Escríbenos por la web'), isNull);
+  });
+
+  testWidgets('guide grants a not-yet-shared permission with a single tap', (
+    t,
+  ) async {
+    enrolled = true;
+    home['capture_active'] = true;
+    await t.binding.setSurfaceSize(const Size(390, 844));
+    addTearDown(() => t.binding.setSurfaceSize(null));
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    await t.tap(find.text('Participación'));
+    await t.pumpAndSettle();
+    await t.tap(find.text('Ubicación'));
+    await t.pumpAndSettle();
+    // Un toque: guarda la preferencia y pide solo ese permiso.
+    expect(find.text('Activa los permisos'), findsOneWidget);
+    expect(calls.where((x) => x == 'schoolParticipation').length, 1);
+    expect(calls.where((x) => x == 'schoolPermission').length, 1);
+    expect(locationGranted, isTrue);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('guide-row-location')),
+        matching: find.text('Activo'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a single access code links the phone', (t) async {
+    Map? enrollArgs;
+    await t.pumpWidget(const SchoolApp());
+    await t.pumpAndSettle();
+    t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      const MethodChannel('pe.upc.acompana/collector'),
+      (call) async {
+        calls.add(call.method);
+        if (call.method == 'schoolEnroll') {
+          enrollArgs = Map.from(call.arguments);
+        }
+        return '{"enrolled":false}';
+      },
+    );
+    // Versión de prueba sin servidor fijo: además pide la dirección.
+    await t.enterText(find.byKey(const ValueKey('code-field')), 'abcd-2345');
+    await t.enterText(find.byType(TextField).last, 'https://colegio.example');
+    await t.pumpAndSettle();
+    await t.tap(find.text('Entrar'));
+    await t.pumpAndSettle();
+    expect(enrollArgs?['invitation'], 'ABCD2345');
+    expect(enrollArgs?['server'], 'https://colegio.example');
+    expect(enrollArgs?['code'], '');
+  });
 }

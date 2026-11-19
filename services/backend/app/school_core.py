@@ -20,8 +20,25 @@ def settings(institution):
         "instrument_enabled": False, "professional_decision": "", "cadence_days": 14,
         "minimum_group": 10, "external_notifications_authorized": False,
         "raw_location_retention_days": 7, "location_interval_minutes": 15,
-        "location_distance_meters": 100, **institution.settings,
+        "location_distance_meters": 100,
+        # Piloto: cuestionarios breves (apagados hasta que el equipo los active).
+        "phq2_weekly_enabled": False, "daily_social_enabled": False, "context_questions_enabled": False,
+        # Cambio de conducta: se muestra en el panel como información; solo abre caso si se activa.
+        "behavior_change_alerts": False,
+        # Asistencia por GPS: zona del colegio y horario de clases (lunes=0).
+        "school_zone": None, "school_days": [0, 1, 2, 3, 4], "school_start": "07:30", "school_end": "13:30",
+        **institution.settings,
     }
+
+
+def school_zone(cfg):
+    """Zona y horario del colegio que el teléfono usa para estimar asistencia. No es dato personal."""
+    z = cfg.get("school_zone")
+    if not z:
+        return None
+    return {"latitude": z["latitude"], "longitude": z["longitude"], "radius_m": z.get("radius_m", 150),
+            "days": cfg["school_days"], "start": cfg["school_start"], "end": cfg["school_end"],
+            "timezone": cfg.get("timezone", "America/Lima")}
 
 
 def member(db, actor, *roles):

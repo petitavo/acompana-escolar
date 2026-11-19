@@ -61,6 +61,8 @@ data class Packet(@PrimaryKey val id:String,val kind:String,val path:String,val 
     @Query("UPDATE outbox SET state='cancelled',error='participation_paused' WHERE state='pending' AND kind IN ('event','capture','location','steps','summary')") fun cancelCapture()
     @Query("UPDATE outbox SET state='cancelled' WHERE kind=:kind AND state='pending'") fun cancelKind(kind:String)
     @Query("SELECT * FROM outbox WHERE kind IN ('local_location','local_steps') AND createdAt>=:since ORDER BY createdAt,id") fun localSensors(since:Long):List<Packet>
+    @Query("SELECT * FROM outbox WHERE kind='local_screen' AND createdAt>=:from AND createdAt<=:to ORDER BY createdAt,id") fun localScreen(from:Long,to:Long):List<Packet>
+    @Query("DELETE FROM outbox WHERE kind='local_screen' AND createdAt<=:until") fun dropLocalScreen(until:Long)
     @Query("SELECT COUNT(*) FROM outbox WHERE state='pending'") fun countPending():Int
     @Query("SELECT COUNT(*) FROM outbox WHERE kind='event'") fun countEvents():Int
     @Query("SELECT COUNT(*) FROM outbox WHERE state='rejected'") fun countRejected():Int

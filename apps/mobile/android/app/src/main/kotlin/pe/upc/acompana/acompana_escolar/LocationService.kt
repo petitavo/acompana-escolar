@@ -16,13 +16,38 @@ import java.time.*
 import java.util.UUID
 import java.util.concurrent.Executors
 
-/** Explicitly started while Activity is visible. Never restarted by WorkManager or BOOT. */
+/**
+ * Se inicia con la app abierta. Si Android lo cierra (reinicio, limpieza del fabricante),
+ * DeviceSetup.restartIfNeeded lo vuelve a iniciar desde el arranque o desde el trabajo
+ * periódico solo cuando la participación sigue activa y hay permiso de segundo plano.
+ */
 class LocationService:Service(),SensorEventListener {
     companion object {
         @Volatile var running=false; private set
         @Volatile var locationRunning=false; private set
         @Volatile var stepsRunning=false; private set
         @Volatile var lastError=""; private set
+        /** Encendido/apagado de pantalla escuchado mientras el servicio vive (sin "Acceso al uso"). */
+        @Volatile var screenListening=false; private set
+    }
+    private val screenNames=mapOf(Intent.ACTION_SCREEN_ON to "SCREEN_INTERACTIVE",Intent.ACTION_SCREEN_OFF to "SCREEN_NON_INTERACTIVE",Intent.ACTION_USER_PRESENT to "KEYGUARD_HIDDEN")
+    private val screenReceiver=object:android.content.BroadcastReceiver(){
+        override fun onReceive(context:android.content.Context,intent:Intent){
+            val name=screenNames[intent.action]?:return;val at=System.currentTimeMillis()
+            enqueue{if(vault.get("active")=="true" && vault.get("usage")=="true")LabDatabase.get(this@LocationService).packets().insert(Packet(UUID.randomUUID().toString(),"local_screen","",JSONObject().put("t",at).put("name",name).toString(),at,state="local"))}
+        }
+    }
+    private fun startScreen(){
+        if(screenListening || vault.get("usage")!="true")return
+        val filter=android.content.IntentFilter().apply{screenNames.keys.forEach{addAction(it)}}
+        androidx.core.content.ContextCompat.registerReceiver(this,screenReceiver,filter,androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+        // Solo cuenta como cubierto el tiempo desde que se empezó a escuchar.
+        vault.put("screen_listen_since",System.currentTimeMillis().toString());screenListening=true
+    }
+    private fun stopScreen(){
+        if(!screenListening)return
+        try{unregisterReceiver(screenReceiver)}catch(_:Exception){}
+        screenListening=false;vault.put("screen_listen_since","")
     }
     private var destroyed=false
     private fun enqueue(task:()->Unit){if(!io.isShutdown)try{io.execute(task)}catch(_:java.util.concurrent.RejectedExecutionException){}}
@@ -55,7 +80,7 @@ class LocationService:Service(),SensorEventListener {
         if(running && intent?.action!="refresh")return START_NOT_STICKY
         if(running){
             try{fused?.removeLocationUpdates(callback);manager.removeUpdates(listener)}catch(_:SecurityException){}
-            sensors.unregisterListener(this)
+            sensors.unregisterListener(this);stopScreen()
             locationRunning=false;stepsRunning=false;running=false
         }
         lastError=""
@@ -65,15 +90,15 @@ class LocationService:Service(),SensorEventListener {
         if(!location&&!steps){lastError="Concede ubicación o actividad física para iniciar los sensores elegidos.";stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("collection","Participación y sensores",NotificationManager.IMPORTANCE_LOW))
-        val stop=PendingIntent.getService(this,2,Intent(this,LocationService::class.java).setAction("pause"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val open=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val notification=NotificationCompat.Builder(this,"collection").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Acompaña Escolar").setContentText(if(location&&steps)"Ubicación y pasos activos · puedes pausar" else if(location)"Ubicación activa · puedes pausar" else "Pasos activos · puedes pausar").setOngoing(true).setContentIntent(open).addAction(0,"Pausar",stop).build()
+        val notification=NotificationCompat.Builder(this,"collection").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Acompaña Escolar").setContentText(if(location&&steps)"Ubicación y pasos activos" else if(location)"Ubicación activa" else "Pasos activos").setOngoing(true).setContentIntent(open).build()
         var type=if(location)ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
         if(steps&&Build.VERSION.SDK_INT>=34)type=type or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
         try{
             startForeground(41,notification,type)
             vault.put("sensor_segment",segment);vault.put("sensor_running","true");running=true
             if(location)startLocation()
+            startScreen()
             if(steps)stepsRunning=sensors.registerListener(this,sensors.getDefaultSensor(Sensor.TYPE_STEP_COUNTER),SensorManager.SENSOR_DELAY_NORMAL)
         }catch(_:Exception){lastError="Android no permitió iniciar los sensores. Revisa los permisos y vuelve a intentarlo con la app abierta.";running=false;vault.put("sensor_running","false");stopSelf()}
         return START_NOT_STICKY
@@ -130,6 +155,6 @@ class LocationService:Service(),SensorEventListener {
     override fun onDestroy(){
         destroyed=true;running=false;locationRunning=false;stepsRunning=false
         try{fused?.removeLocationUpdates(callback);manager.removeUpdates(listener)}catch(_:SecurityException){}
-        sensors.unregisterListener(this);vault.put("sensor_running","false");io.shutdown();super.onDestroy()
+        sensors.unregisterListener(this);stopScreen();vault.put("sensor_running","false");io.shutdown();super.onDestroy()
     }
 }

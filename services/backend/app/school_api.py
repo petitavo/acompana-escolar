@@ -6,7 +6,7 @@ import secrets
 from datetime import timedelta, datetime, time
 from uuid import UUID
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy import select, func, update, or_, delete
 from .db import *
@@ -16,7 +16,7 @@ from .school_core import *
 from .security import database, identity, digest, hasher, once, audit, require
 from .config import MODE, PILOT_ENABLED
 from .forms import score
-from .phq9 import PHQ9, ensure_phq9
+from .phq9 import PHQ9, ensure_phq9, phq2
 from .cases import add_reason, case_view
 
 router = APIRouter(prefix="/api/v1/school", tags=["Producto escolar"])
@@ -145,10 +145,25 @@ def create_classroom(body: ClassroomInput, actor=Depends(identity), db=Depends(d
     return public(c)
 
 
+# Código de acceso del estudiante: 8 caracteres sin letras/números que se confundan
+# (0/O, 1/I/L). 31^8 ≈ 8.5e11 combinaciones; un solo uso, vence en 7 días y /enroll
+# limita los intentos fallidos.
+ACCESS_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def access_code():
+    raw = "".join(secrets.choice(ACCESS_ALPHABET) for _ in range(8))
+    return raw[:4] + "-" + raw[4:]
+
+
+def normalize_access(value):
+    return "".join(c for c in value.upper() if c.isalnum())
+
+
 def make_link(db, p, purpose, version, channel=""):
-    token = secrets.token_urlsafe(32)
+    token = access_code() if purpose == "student" else secrets.token_urlsafe(32)
     code = str(secrets.randbelow(90000000) + 10000000)
-    link = AccessLink(participant_id=p.participant_id, token_hash=digest(token), purpose=purpose, expires_at=now() + timedelta(days=7), detail={"code_hash": digest(code), "version": version, "channel": channel, "delivery": "operator_pending", "failed_attempts": 0})
+    link = AccessLink(participant_id=p.participant_id, token_hash=digest(normalize_access(token) if purpose == "student" else token), purpose=purpose, expires_at=now() + timedelta(days=7), detail={"code_hash": digest(code), "version": version, "channel": channel, "delivery": "operator_pending", "failed_attempts": 0})
     db.add(link)
     db.flush()
     return {"id": link.id, "token": token, "verification_code": code, "expires_at": link.expires_at.isoformat(), "delivery": "Pendiente de entrega individual por el operador; código por canal separado"}
@@ -286,9 +301,36 @@ def guardian_withdraw(body: dict[str, str], db=Depends(database)):
     return {"withdrawn": True}
 
 
+ENROLL_FAILURES = 20
+
+
 @router.post("/enroll")
-def enroll_student(body: VerifyEnrollment, db=Depends(database)):
-    link = checked_link(db, body.invitation, "student", body.verification_code)
+def enroll_student(body: VerifyEnrollment, request: Request, db=Depends(database)):
+    short = normalize_access(body.invitation)
+    if len(short) == 8 and not body.verification_code:
+        # Un solo código: se limita el número de intentos fallidos por origen.
+        from .db import LoginAttempt
+        key = digest("enroll:" + (request.client.host if request.client else "unknown"))
+        attempt = db.get(LoginAttempt, key)
+        if attempt and utc(attempt.until) > now() and attempt.count >= ENROLL_FAILURES:
+            raise HTTPException(429, "Demasiados intentos. Espera 15 minutos")
+        try:
+            link = checked_link(db, short, "student")
+        except HTTPException:
+            if not attempt:
+                attempt = LoginAttempt(key=key, count=0, until=now() + timedelta(minutes=15))
+                db.add(attempt)
+            if utc(attempt.until) < now():
+                attempt.count, attempt.until = 0, now() + timedelta(minutes=15)
+            attempt.count += 1
+            db.commit()
+            raise HTTPException(401, "Código incorrecto, usado o vencido. Revísalo o pide uno nuevo al colegio")
+        method = "access_code"
+    else:
+        if not body.verification_code:
+            raise HTTPException(422, "Falta el código")
+        link = checked_link(db, short if len(short) == 8 else body.invitation, "student", body.verification_code)
+        method = "invitation_and_separate_code"
     p = profile(db, link.participant_id)
     if db.get(Participant, p.participant_id).status == "revoked":
         raise HTTPException(409, "Participación retirada")
@@ -299,9 +341,30 @@ def enroll_student(body: VerifyEnrollment, db=Depends(database)):
     token = secrets.token_urlsafe(48)
     db.add(Session(device_id=device.id, token_hash=digest(token), csrf="", expires_at=now() + timedelta(days=30)))
     version = settings(db.get(Institution, p.institution_id))["document_version"]
-    db.add(Authorization(participant_id=p.participant_id, kind="verification", version=version, actor_id=device.id, detail={"accepted": True, "method": "invitation_and_separate_code"}))
+    db.add(Authorization(participant_id=p.participant_id, kind="verification", version=version, actor_id=device.id, detail={"accepted": True, "method": method}))
+    if authorization_status(db, p)["ready"]:
+        # Código renovado (teléfono nuevo o app reinstalada): el alumno ya había aceptado,
+        # así que sigue participando sin volver a decidir nada.
+        set_capture(db, p, device, {**p.policy, "paused": False}, now())
     audit(db, device.id, "school.enrolled", p.participant_id)
     return {"token": token, "device_id": device.id, "mode": MODE, "pseudonym": db.get(Participant, p.participant_id).pseudonym, "name": p.display_name}
+
+
+def set_capture(db, p, d, policy, at):
+    """Activa o detiene la captura de un teléfono según la política del alumno."""
+    if not policy.get("paused") and (p.is_test or PILOT_ENABLED):
+        for kind in ("usage", "location", "steps"):
+            # Un período nuevo de captura empieza ahora, no antes.
+            if policy.get(kind) and (not p.policy.get(kind) or d.status != "active"):
+                policy[kind + "_since"] = max(at, now()).isoformat()
+        d.status = "active"
+        if not db.scalar(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
+            db.add(Interval(device_id=d.id, start_at=now()))
+    else:
+        d.status = "paused"
+        for interval in db.scalars(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
+            interval.end_at = at
+    p.policy = policy
 
 
 def withdraw(db, p, actor_id):
@@ -337,8 +400,10 @@ def student_home(actor=Depends(identity), db=Depends(database)):
     p = student_actor(db, actor)
     cfg = settings(db.get(Institution, p.institution_id))
     rows = list(db.scalars(select(Response).where(Response.participant_id == p.participant_id).order_by(Response.created_at.desc()).limit(1)))
-    due = utc(rows[0].created_at) + timedelta(days=cfg["cadence_days"]) if rows else now()
-    return {"analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}}
+    due = utc(rows[0].detail.get("applied_at", rows[0].created_at)) + timedelta(days=cfg["cadence_days"]) if rows else now()
+    from .checkins import student_plan
+    plan = student_plan(db, p, cfg, None if phq9_due(db, p, cfg) else due)
+    return {"plan": plan, "analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}, "school_zone": school_zone(cfg)}
 
 
 @router.post("/me/participation")
@@ -372,19 +437,10 @@ def student_participation(body: ParticipationInput, actor=Depends(identity), db=
         policy = {**old, **{k: getattr(body, k) for k in ("usage", "location", "steps", "raw_location_upload", "research_access", "reminder_time", "reminders")}}
         if policy["raw_location_upload"] and not policy["location"]:
             raise HTTPException(422, "Compartir coordenadas requiere compartir ubicación")
-        for kind in ("usage", "location", "steps"):
-            if policy[kind] and (not old.get(kind) or d.status != "active"):
-                policy[kind + "_since"] = max(body.occurred_at, now()).isoformat()
-        policy["paused"] = body.action == "pause" or body.action == "preferences" and (d.status != "active" or old.get("paused", False))
-        p.policy = policy
-        if policy["paused"] or not p.is_test and not PILOT_ENABLED:
-            d.status = "paused"
-            for interval in db.scalars(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
-                interval.end_at = body.occurred_at
-        else:
-            d.status = "active"
-            if not db.scalar(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
-                db.add(Interval(device_id=d.id, start_at=now()))
+        # Un teléfono recién vinculado (status "pending") no cuenta como pausa: guardar
+        # preferencias lo activa. Solo una pausa pedida antes se mantiene.
+        policy["paused"] = body.action == "pause" or body.action == "preferences" and old.get("paused", False)
+        set_capture(db, p, d, policy, body.occurred_at)
         db.add(Authorization(participant_id=p.participant_id, kind="preferences", version=body.document_version, actor_id=d.id, detail={"usage": body.usage, "location": body.location, "steps": body.steps, "raw_location_upload": body.raw_location_upload, "research_access": body.research_access, "action": body.action}))
         audit(db, d.id, "school.participation", p.participant_id)
         return {"saved": True, "capture_active": d.status == "active", "policy": {k: v for k, v in policy.items() if k not in ("home_zone", "guardian_channel")}}
@@ -397,10 +453,18 @@ def due_questionnaires(actor=Depends(identity), db=Depends(database)):
     cfg = settings(db.get(Institution, p.institution_id))
     if not cfg["instrument_enabled"] or not authorization_status(db, p)["ready"] or not p.is_test and not PILOT_ENABLED:
         return []
-    last = db.scalar(select(Response).where(Response.participant_id == p.participant_id).order_by(Response.created_at.desc()))
-    if last and utc(last.detail.get("applied_at", last.created_at)) + timedelta(days=cfg["cadence_days"]) > now():
-        return []
-    return [{**PHQ9, "coverage": coverage_now(cfg)}]
+    from .checkins import due_forms
+    if phq9_due(db, p, cfg):
+        # Mientras el PHQ-9 esté pendiente se muestra solo: así nadie encadena
+        # varios cuestionarios seguidos. Las preguntas breves aparecen después.
+        return [{**PHQ9, "kind": "phq9", "submit_path": "/me/questionnaires", "coverage": coverage_now(cfg)}]
+    return [{**f, "coverage": coverage_now(cfg)} for f in due_forms(db, p, cfg)]
+
+
+def phq9_due(db, p, cfg):
+    form = ensure_phq9(db)
+    last = db.scalar(select(Response).where(Response.participant_id == p.participant_id, Response.instrument_id == form.id).order_by(Response.created_at.desc()))
+    return not last or utc(last.detail.get("applied_at", last.created_at)) + timedelta(days=cfg["cadence_days"]) <= now()
 
 
 @router.post("/me/questionnaires")
@@ -421,7 +485,7 @@ def answer_questionnaire(body: SchoolAnswer, actor=Depends(identity), db=Depends
         last = db.scalar(select(Response).where(Response.participant_id == p.participant_id, Response.instrument_id == form.id).order_by(Response.created_at.desc()))
         if last and body.applied_at < utc(last.detail["applied_at"]) + timedelta(days=cfg["cadence_days"]):
             raise HTTPException(409, "Este período ya tiene una respuesta; no se duplican etiquetas")
-        row = Response(participant_id=p.participant_id, instrument_id=form.id, detail={**body.model_dump(mode="json"), "total": total, "complete": True, "real": not p.is_test, "provenance": "test_account" if p.is_test else "participant_report", "definition_sha256": PHQ9["definition_sha256"], "authorization_snapshot": authorization_status(db, p), "research_access_at_collection": bool(p.policy.get("research_access")), "revision": 1})
+        row = Response(participant_id=p.participant_id, instrument_id=form.id, detail={**body.model_dump(mode="json"), "total": total, "complete": True, "real": not p.is_test, "provenance": "test_account" if p.is_test else "participant_report", "definition_sha256": PHQ9["definition_sha256"], "phq2": phq2(body.answers), "review_threshold": PHQ9["review_threshold"], "authorization_snapshot": authorization_status(db, p), "research_access_at_collection": bool(p.policy.get("research_access")), "revision": 1})
         db.add(row)
         db.flush()
         if total >= PHQ9["review_threshold"]:
@@ -526,6 +590,8 @@ def clinical_profile(ident: UUID, actor=Depends(identity), db=Depends(database))
     result["mobility"] = list(latest.values())[-60:]
     result["predictions"] = [public(v) for v in db.scalars(select(Prediction).join(ModelRecord, ModelRecord.id == Prediction.model_id).where(Prediction.participant_id == p.participant_id, ModelRecord.state == "active").order_by(Prediction.cutoff.desc()).limit(30))]
     result["reference_message"] = "Estamos construyendo tu referencia" if not result["evaluations"] else None
+    from .checkins import history as checkin_history
+    result["checkins"] = checkin_history(db, p.participant_id)
     return result
 
 

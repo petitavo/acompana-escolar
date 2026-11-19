@@ -10,6 +10,7 @@ from app.config import (
     EXPORT_TTL_HOURS,
 )
 from app.features import process_device
+from app.config import FEATURE_VERSION
 from app.security import audit
 
 
@@ -131,7 +132,7 @@ def export(db, job):
         "period": [body["start"], body["end"]],
         "expires_at": (now() + timedelta(hours=EXPORT_TTL_HOURS)).isoformat(),
         "origin": "synthetic" if MODE == "DEMO" else "android_lab",
-        "feature_version": "screen-v1.0",
+        "feature_version": FEATURE_VERSION,
         "missing_values": count_missing(rows),
     }
 
@@ -139,7 +140,7 @@ def export(db, job):
 def erase(db, pid, actor):
     devices = list(db.scalars(select(Device.id).where(Device.participant_id == pid)))
     cases = list(db.scalars(select(Case.id).where(Case.participant_id == pid)))
-    from app.school_db import StudentProfile, Authorization, AccessLink, Followup, Notification, PushToken, SensorPoint, MobilityDay, Prediction, DatasetRecord, ModelRecord, CaseGrant
+    from app.school_db import StudentProfile, Authorization, AccessLink, Followup, Notification, PushToken, SensorPoint, MobilityDay, Prediction, DatasetRecord, ModelRecord, CaseGrant, CheckIn
     school_profile = db.scalar(select(StudentProfile).where(StudentProfile.participant_id == pid))
     if school_profile:
         # Conservative invalidation of authorized datasets/models in the affected
@@ -157,7 +158,7 @@ def erase(db, pid, actor):
             if n.recipient_id in devices or n.detail.get("case_id") in cases:
                 db.delete(n)
         db.execute(delete(CaseGrant).where(CaseGrant.participant_id == pid))
-        for cls, column, ids in [(Followup, Followup.participant_id, [pid]), (Authorization, Authorization.participant_id, [pid]), (AccessLink, AccessLink.participant_id, [pid]), (SensorPoint, SensorPoint.device_id, devices), (MobilityDay, MobilityDay.device_id, devices), (Prediction, Prediction.participant_id, [pid]), (PushToken, PushToken.owner_id, devices), (StudentProfile, StudentProfile.participant_id, [pid])]:
+        for cls, column, ids in [(Followup, Followup.participant_id, [pid]), (Authorization, Authorization.participant_id, [pid]), (AccessLink, AccessLink.participant_id, [pid]), (SensorPoint, SensorPoint.device_id, devices), (MobilityDay, MobilityDay.device_id, devices), (Prediction, Prediction.participant_id, [pid]), (CheckIn, CheckIn.participant_id, [pid]), (PushToken, PushToken.owner_id, devices), (StudentProfile, StudentProfile.participant_id, [pid])]:
             db.execute(delete(cls).where(column.in_(ids)))
     # Cached administrative invitation/import results can also contain this identity.
     for cached in db.scalars(select(Idempotency)):
@@ -342,9 +343,9 @@ def run_one():
                     d,
                     j.payload["start"],
                     j.payload["end"],
-                    version="screen-v1.0"
+                    version=FEATURE_VERSION
                     if j.actor == "worker"
-                    else "screen-v1.0/reprocess-" + j.id[:8],
+                    else FEATURE_VERSION + "/reprocess-" + j.id[:8],
                 )
             else:
                 raise ValueError("Tipo de job no soportado")

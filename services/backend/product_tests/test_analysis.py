@@ -84,7 +84,7 @@ def test_train_comparators_reproducible_shap_and_fixture_not_active(client):
 def test_shared_android_contract_fixtures():
     from pathlib import Path
     for c in json.loads(Path('packages/contracts/fixtures/mobility-v1.json').read_text()):
-        actual=day_summary(c['samples'],c['day'],c['zone'],c.get('home'))
+        actual=day_summary(c['samples'],c['day'],c['zone'],c.get('home'),school=c.get('school'))
         assert actual['features']==c['expected']['features'],c['name']
         assert actual['quality']==c['expected']['quality'],c['name']
 

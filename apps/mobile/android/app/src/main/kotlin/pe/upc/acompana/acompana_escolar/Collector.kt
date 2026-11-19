@@ -22,7 +22,8 @@ import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class ApiFailure(val status:Int):Exception("Servidor HTTP $status")
+/** Error del servidor. [detail] es el mensaje en español que envía la API, si lo hay. */
+class ApiFailure(val status:Int,val detail:String=""):Exception("Servidor HTTP $status")
 class Collector(private val context:Context){
     private val vault=Vault(context)
     private val database=LabDatabase.get(context)
@@ -48,7 +49,8 @@ class Collector(private val context:Context){
                         WorkManager.getInstance(context).cancelUniqueWork("school-sync")
                     }
                 }
-                throw ApiFailure(response.code)
+                val detail=try{JSONObject(response.body?.string()?:"{}").opt("detail").let{if(it is String)it else ""}}catch(_:Exception){""}
+                throw ApiFailure(response.code,detail)
             }
             response.body?.string()?:"{}"
         }
@@ -85,12 +87,32 @@ class Collector(private val context:Context){
     fun capture():JSONObject=synchronized(mutex){
         if(vault.get("active")!="true" || (vault.get("mode")!="LAB" && vault.get("mode")!="REAL") || vault.get("mode")=="REAL" && vault.get("usage")!="true")return status()
         val startAllowed=vault.get("interval_start","0").toLong()
-        val end=System.currentTimeMillis();val start=CapturePolicy.start(startAllowed,vault.get("cursor",startAllowed.toString()).toLong(),end)
+        val end=System.currentTimeMillis();var start=CapturePolicy.start(startAllowed,vault.get("cursor",startAllowed.toString()).toLong(),end)
+        // Sin "Acceso al uso" (Android lo restringe en apps instaladas fuera de Play Store),
+        // la pantalla se mide con los avisos de encendido/apagado que escucha el servicio.
+        // Solo cuenta el tiempo en que de verdad se estuvo escuchando.
+        val usageAccess=permission()
+        val listenSince=vault.get("screen_listen_since").toLongOrNull()
+        val broadcast=vault.get("mode")=="REAL" && !usageAccess && LocationService.screenListening && listenSince!=null
+        if(broadcast && listenSince!!>start)start=listenSince
         if(end<=start)return status()
-        val before=permission();val sessionId=UUID.randomUUID().toString();val packets=mutableListOf<Packet>()
+        val before=usageAccess||broadcast;val sessionId=UUID.randomUUID().toString();val packets=mutableListOf<Packet>()
         var success=false;var error="none"
+        val source=if(broadcast)"android_screen_broadcast" else "android_usage_events"
         try{
             if(!before)error="permission_missing"
+            else if(broadcast){
+                for(row in dao.localScreen(start,end)){
+                    val raw=JSONObject(row.body);val t=raw.getLong("t");val name=raw.getString("name")
+                    if(!CapturePolicy.permitted(t,startAllowed,start,end))continue
+                    val stable=vault.get("device")+"|"+t+"|"+name+"|"
+                    val fingerprint=java.security.MessageDigest.getInstance("SHA-256").digest(stable.toByteArray()).joinToString(""){"%02x".format(it)}
+                    val id=UUID.nameUUIDFromBytes(stable.toByteArray()).toString();val zone=ZoneId.systemDefault();val instant=Instant.ofEpochMilli(t)
+                    val body=JSONObject().put("schema_version","1.0").put("event_id",id).put("device_id",vault.get("device")).put("occurred_at",instant.toString()).put("timezone",zone.id).put("utc_offset_minutes",zone.rules.getOffset(instant).totalSeconds/60).put("event_type",name).put("source",source).put("payload",JSONObject()).put("capture_session_id",sessionId).put("consent_version",vault.get("document_version"))
+                    packets.add(Packet(id,"event","/events/batch",body.toString(),end,fingerprint))
+                }
+                success=true
+            }
             else{
                 val service=context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
                 val query=service.queryEvents(start,end)
@@ -112,12 +134,14 @@ class Collector(private val context:Context){
                 }
             }
         }catch(e:SecurityException){error="permission_missing"}catch(e:Exception){error="query_failed"}
-        val after=permission();if(!after){success=false;error="permission_missing"}
+        val after=if(broadcast)LocationService.screenListening && vault.get("screen_listen_since")==listenSince.toString() else permission()
+        if(!after){success=false;error="permission_missing"}
+        dao.dropLocalScreen(end)
         if(vault.get("active")!="true")return status()
         val battery=context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val conn=context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         val caps=conn.getNetworkCapabilities(conn.activeNetwork)
-        val report=JSONObject().put("id",sessionId).put("start_at",Instant.ofEpochMilli(start).toString()).put("end_at",Instant.ofEpochMilli(end).toString()).put("success",success).put("permission_before",before).put("permission_after",after).put("count",packets.size).put("error",error).put("charging",battery.isCharging).put("connected",caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)==true).put("outbox_pending",dao.countPending()).put("monotonic_ms",SystemClock.elapsedRealtime()).put("keyguard_available",true)
+        val report=JSONObject().put("id",sessionId).put("start_at",Instant.ofEpochMilli(start).toString()).put("end_at",Instant.ofEpochMilli(end).toString()).put("success",success).put("permission_before",before).put("permission_after",after).put("count",packets.size).put("error",error).put("charging",battery.isCharging).put("connected",caps?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)==true).put("outbox_pending",dao.countPending()).put("monotonic_ms",SystemClock.elapsedRealtime()).put("keyguard_available",true).put("source",source)
         val level=battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);if(level in 0..100)report.put("battery",level)
         database.runInTransaction{
             dao.insert(Packet(sessionId,"capture","/capture-sessions",report.toString(),end))

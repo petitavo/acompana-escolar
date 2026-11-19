@@ -11,7 +11,7 @@ from .school_db import SensorPoint, MobilityDay, Institution
 from .school_schemas import SensorBatch, HomeZone, Strict
 from .school_core import student_actor, sensor_allowed, settings, profile, access, member
 from .security import identity, database, digest, audit, once
-from .mobility import VERSION, FEATURES
+from .mobility import VERSION, FEATURES, LEGACY_VERSIONS, LEGACY_FEATURES, school_window
 
 router = APIRouter(prefix="/api/v1/school", tags=["Sensores autorizados"])
 
@@ -89,6 +89,7 @@ class LocalQuality(Strict):
     uncertain_minutes: float = Field(ge=0, le=1500, allow_inf_nan=False)
     period_minutes: float = Field(ge=0, le=1500, allow_inf_nan=False)
     cluster_observed_minutes: float = Field(ge=0, le=1500, allow_inf_nan=False)
+    school_observed_minutes: float | None = Field(default=None, ge=0, le=1500, allow_inf_nan=False)
 
 
 class LocalSummary(Strict):
@@ -102,8 +103,11 @@ class LocalSummary(Strict):
 def local_summary(body: LocalSummary, actor=Depends(identity), db=Depends(database), idempotency_key: str | None = Header(default=None)):
     p = student_actor(db, actor, True)
     d = actor["device"]
-    if body.version != VERSION or set(body.features) != set(FEATURES):
+    expected = set(FEATURES) if body.version == VERSION else set(LEGACY_FEATURES) if body.version in LEGACY_VERSIONS else None
+    if expected is None or set(body.features) != expected:
         raise HTTPException(422, "Contrato de movilidad incompatible")
+    from .school_core import school_zone
+    school = school_zone(settings(db.get(Institution, p.institution_id)))
     if not now().date() - timedelta(days=7) <= body.day <= now().date():
         raise HTTPException(422, "Día fuera de retención")
     from math import isfinite
@@ -130,10 +134,16 @@ def local_summary(body: LocalSummary, actor=Depends(identity), db=Depends(databa
             raise HTTPException(422, "Cobertura y minutos no coinciden")
         if not 0 < (b-a).total_seconds() <= 25 * 3600:
             raise HTTPException(422, "Ventana inválida")
-        row = {**row, "eligible": value is not None and row.get("operational_coverage", 0) >= 0.8 and b <= now(), "source": "android_local_summary"}
+        if name == "school_minutes":
+            hours = school_window(school, body.day, zone)
+            needed = 0.5 * (hours[1] - hours[0]).total_seconds() / 60 if hours else None
+            eligible = value is not None and needed is not None and row["observed_minutes"] >= needed and b <= now()
+        else:
+            eligible = value is not None and row.get("operational_coverage", 0) >= 0.8 and b <= now()
+        row = {**row, "eligible": eligible, "source": "android_local_summary"}
         approved[name] = row
     quality = body.quality.model_dump()
-    if set(quality) - {"observed_minutes", "gap_count", "excluded_count", "step_resets", "inside_minutes", "outside_minutes", "uncertain_minutes", "period_minutes", "cluster_observed_minutes"}:
+    if set(quality) - {"observed_minutes", "gap_count", "excluded_count", "step_resets", "inside_minutes", "outside_minutes", "uncertain_minutes", "period_minutes", "cluster_observed_minutes", "school_observed_minutes"}:
         raise HTTPException(422, "Calidad contiene campos no permitidos")
     if any(v is not None and (not isinstance(v, (int, float)) or not isfinite(v) or v < 0) for v in quality.values()):
         raise HTTPException(422, "Calidad inválida")
@@ -141,7 +151,7 @@ def local_summary(body: LocalSummary, actor=Depends(identity), db=Depends(databa
     if quality["observed_minutes"] > period or quality["cluster_observed_minutes"] > quality["observed_minutes"] or abs((quality["inside_minutes"] or 0) + (quality["outside_minutes"] or 0) + quality["uncertain_minutes"] - period) > .01:
         raise HTTPException(422, "Duraciones de calidad incompatibles")
     def apply():
-        row = MobilityDay(device_id=d.id, day=body.day.isoformat(), version=VERSION, detail={"features": approved, "quality": quality, "source": "android_local_summary", "lineage": {"contract": VERSION, "raw_uploaded": False}})
+        row = MobilityDay(device_id=d.id, day=body.day.isoformat(), version=body.version, detail={"features": approved, "quality": quality, "source": "android_local_summary", "lineage": {"contract": body.version, "raw_uploaded": False}})
         db.add(row)
         db.flush()
         from worker.school import evaluate_mobility

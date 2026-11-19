@@ -8,7 +8,7 @@ so training is never limited to a hand-authored JSON.
 """
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, date, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from sqlalchemy import select
@@ -125,7 +125,9 @@ def build_dataset(db, institution_id, spec, at=None):
                     excl_days.append({"day": day, "reason": "collection_authorization_missing"})
                     continue
                 accepted[name] = {"value": f["value"], "eligible": bool(f["eligible"])}
-                window_end = end.isoformat()
+                # El día se cierra a medianoche local aunque alguna variable (descanso) cierre antes.
+                close = datetime.combine(date.fromisoformat(day) + timedelta(days=1), time.min, ZoneInfo(cfg["timezone"])).astimezone(timezone.utc)
+                window_end = max(end, close).isoformat()
             if not accepted:
                 continue
             slot = merged.setdefault(day, {"features": {}, "sources": []})

@@ -85,3 +85,26 @@ def test_changing_preferences_does_not_resume_paused_participation(client):
     assert c.get(A+'/me').json()['capture_active'] is False
     body['action']='resume'
     assert post(c,'/me/participation',body)['capture_active'] is True
+
+
+def test_renewed_code_keeps_participating_without_pause(client):
+    # Reinstalar la app con un código renovado no deja el teléfono nuevo en pausa,
+    # y guardar preferencias en un teléfono aún sin activar lo activa.
+    from app.db import SessionLocal, Device
+    c=client
+    inv,cfg=setup(c,False)
+    phone=enroll(c,inv)
+    c.headers['authorization']='Bearer '+phone['token']
+    authorize(c,inv,cfg)
+    body={'action':'preferences','document_version':cfg['document_version'],'occurred_at':datetime.now(timezone.utc).isoformat(),'usage':True,'location':True}
+    assert post(c,'/me/participation',body)['capture_active'] is True
+    login(c)
+    renewed=post(c,f"/students/{inv['student']['participant_id']}/access-link")
+    new_phone=enroll(c,renewed)
+    c.headers['authorization']='Bearer '+new_phone['token']
+    home=c.get(A+'/me').json()
+    assert home['capture_active'] is True and home['policy']['location'] is True
+    with SessionLocal.begin() as db:
+        db.get(Device,new_phone['device_id']).status='pending'
+    assert c.get(A+'/me').json()['capture_active'] is False
+    assert post(c,'/me/participation',body)['capture_active'] is True
