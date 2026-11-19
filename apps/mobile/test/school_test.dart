@@ -54,6 +54,8 @@ void main() {
     },
   };
   setUpAll(() async {
+    // Fuentes de los goldens: solo existen en Linux (CI).
+    if (!Platform.isLinux) return;
     final font = FontLoader('Roboto');
     font.addFont(
       Future.value(
@@ -211,7 +213,7 @@ void main() {
       );
       expect(find.text('LAB · prueba interna con adultos'), findsNothing);
       expect(find.byKey(const ValueKey('code-field')), findsOneWidget);
-      await expectLater(
+      if (Platform.isLinux) await expectLater(
         find.byType(SchoolApp),
         matchesGoldenFile('goldens/product-onboarding.png'),
       );
@@ -227,7 +229,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('¡Hola, Ana!'), findsOneWidget);
     expect(find.text('Tu camino'), findsOneWidget);
-    await expectLater(
+    if (Platform.isLinux) await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-home.png'),
     );
@@ -309,13 +311,36 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Cuestionario'));
     await t.pumpAndSettle();
+    // Una pregunta por pantalla, con la instrucción del instrumento a la vista.
     expect(find.text(instrument['recall']), findsOneWidget);
-    expect(find.byType(RadioListTile<int>), findsNWidgets(36));
-    expect(find.text('Enviar respuesta'), findsOneWidget);
-    await expectLater(
+    expect(find.text('Pregunta 1 de 9'), findsOneWidget);
+    expect(find.text(instrument['questions'][0]['text']), findsOneWidget);
+    for (final o in instrument['options']) {
+      expect(find.text(o['label']), findsOneWidget);
+    }
+    expect(find.text('Enviar respuesta'), findsNothing);
+    if (Platform.isLinux) await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-phq.png'),
     );
+    // Elegir "Varios días" en las 9 preguntas pasa solo a la siguiente; luego
+    // aparece la pregunta de dificultad y al final "Enviar respuesta".
+    for (var i = 0; i < 9; i++) {
+      expect(find.text(instrument['questions'][i]['text']), findsOneWidget);
+      final option = find.text(instrument['options'][1]['label']);
+      await t.ensureVisible(option);
+      await t.tap(option);
+      await t.pump(const Duration(milliseconds: 300));
+      await t.pumpAndSettle();
+    }
+    expect(find.text(instrument['functioning']['text']), findsOneWidget);
+    final first = find.text(instrument['functioning']['options'][0]);
+    await t.ensureVisible(first);
+    await t.tap(first);
+    await t.pump(const Duration(milliseconds: 300));
+    await t.pumpAndSettle();
+    expect(find.text('¡Respondiste todo!'), findsOneWidget);
+    expect(find.text('Enviar respuesta'), findsOneWidget);
     await t.binding.setSurfaceSize(null);
   });
   testWidgets(
@@ -395,7 +420,7 @@ void main() {
       await t.tap(find.byKey(const ValueKey('permission-location')));
       await t.pumpAndSettle();
       expect(find.textContaining('Permiso no concedido.'), findsOneWidget);
-      await expectLater(
+      if (Platform.isLinux) await expectLater(
         find.byType(SchoolApp),
         matchesGoldenFile('goldens/product-participation.png'),
       );
@@ -590,7 +615,7 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Activa los permisos'), findsOneWidget);
     expect(find.text('Uso de pantalla'), findsOneWidget);
-    await expectLater(
+    if (Platform.isLinux) await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-guide.png'),
     );

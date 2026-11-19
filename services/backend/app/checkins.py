@@ -118,6 +118,61 @@ def due(db, p, cfg, code):
     return utc(last.applied_at) + timedelta(days=days) - timedelta(hours=12) <= now()
 
 
+def next_at(db, p, cfg, code):
+    """Cuándo vuelve a tocar un cuestionario breve (None = ya está disponible)."""
+    if due(db, p, cfg, code):
+        return None
+    last = db.scalar(select(CheckIn).where(CheckIn.participant_id == p.participant_id, CheckIn.code == code).order_by(CheckIn.applied_at.desc()))
+    if code == "PHQ2_SEMANAL":
+        previous = last_phq9_at(db, p)
+        start = previous + timedelta(days=7) if previous else now()
+        if last:
+            start = max(start, utc(last.applied_at) + timedelta(days=7))
+        return start
+    if not last:
+        return None
+    if code == "CONTACTO_DIARIO":
+        from zoneinfo import ZoneInfo
+        from datetime import datetime, time
+        zone = ZoneInfo(cfg.get("timezone", "America/Lima"))
+        tomorrow = utc(last.applied_at).astimezone(zone).date() + timedelta(days=1)
+        return datetime.combine(tomorrow, time(0, 0), zone)
+    days = CHECKINS[code]["cadence_days"] if code != "CONTEXTO_MENSUAL" else max(cfg["cadence_days"], 28)
+    return utc(last.applied_at) + timedelta(days=days)
+
+
+# Para el alumno: qué responde, cada cuánto y por qué (sin puntajes ni etiquetas).
+PLAN_TEXT = {
+    "PHQ9": ("Cómo te has sentido", "Nos ayuda a saber si necesitas que alguien converse contigo."),
+    "PHQ2_SEMANAL": ("Revisión breve", "Un repaso rápido entre un cuestionario y otro."),
+    "CONTACTO_DIARIO": ("Pregunta del día", "Cuánto compartiste con otras personas hoy."),
+    "CONTEXTO_MENSUAL": ("Tu entorno", "Cómo te va con tus compañeros, tu familia y tus amigos."),
+}
+
+
+def student_plan(db, p, cfg, phq9_next):
+    """Lista ordenada de lo que el alumno responde, con cuántas preguntas, cada cuánto y
+    cuándo le toca. phq9_next: None si el PHQ-9 está pendiente, o la fecha del próximo."""
+    items = []
+    if cfg["instrument_enabled"]:
+        title, why = PLAN_TEXT["PHQ9"]
+        items.append({"code": "PHQ9", "title": title, "why": why, "questions": len(PHQ9["questions"]),
+                      "every_days": cfg["cadence_days"], "next_at": phq9_next.isoformat() if phq9_next else None})
+    for code, definition in CHECKINS.items():
+        if not enabled(cfg, code):
+            continue
+        title, why = PLAN_TEXT[code]
+        when = next_at(db, p, cfg, code)
+        # Mientras el PHQ-9 está pendiente, las preguntas breves esperan a que se responda.
+        waiting = phq9_next is None and cfg["instrument_enabled"]
+        items.append({"code": code, "title": title, "why": why, "questions": len(definition["questions"]),
+                      "every_days": definition["cadence_days"] if code != "CONTEXTO_MENSUAL" else max(cfg["cadence_days"], 28),
+                      "next_at": when.isoformat() if when else None,
+                      # La revisión breve se calcula desde el PHQ-9: mientras falte, va "después".
+                      "after_phq9": waiting and (when is None or code == "PHQ2_SEMANAL")})
+    return items
+
+
 def due_forms(db, p, cfg):
     return [{**{k: v for k, v in CHECKINS[c].items() if k != "setting"}, "submit_path": "/me/check-ins"}
             for c in CHECKINS if enabled(cfg, c) and due(db, p, cfg, c)]

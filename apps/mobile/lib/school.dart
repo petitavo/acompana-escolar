@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'permissions.dart';
+import 'questionnaire.dart';
 
 const brandColor = Color(0xff0e7c7b);
 const coral = Color(0xffff7a59);
@@ -772,7 +773,11 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     } finally {
       guideOpen = false;
     }
-    if (mounted) await refresh();
+    if (!mounted) return;
+    await refresh();
+    if (mounted && steps_.isNotEmpty && readySteps == steps_.length) {
+      await showPlanIntro();
+    }
   }
 
   Future<void> startSensors() async {
@@ -1243,92 +1248,58 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     }
   }
 
+  /// Título que ve el alumno para el cuestionario actual (el del plan si existe).
+  String get formTitle {
+    final code = isPhq ? 'PHQ9' : '${form?['instrument_id']}';
+    for (final i in (home['plan'] ?? []) as List) {
+      if (i['code'] == code) return '${i['title']}';
+    }
+    return isPhq
+        ? 'Cómo te has sentido'
+        : '${form?['title'] ?? 'Pregunta breve'}';
+  }
+
   Widget questionnaire() {
-    final questions = form!['questions'] as List;
-    final done = questions.where((q) => answers[q['id']] != null).length;
+    final questions = [
+      for (final q in form!['questions'] as List)
+        {'id': q['id'], 'text': q['text'], 'options': optionsFor(q)},
+    ];
     final needsFunctioning = isPhq && answers.values.any((v) => v > 0);
-    final complete =
-        done == questions.length && (!needsFunctioning || functioning != null);
-    return card(
-      isPhq ? 'Cómo te has sentido' : (form!['title'] ?? 'Pregunta breve'),
-      [
-        Text(
-          form!['recall'] ??
-              form!['instructions'] ??
-              'Durante las últimas 2 semanas, ¿qué tan seguido ha tenido molestias debido a los siguientes problemas?',
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        const Text(
-          'No hay respuestas buenas ni malas. Solo el equipo de psicología verá lo que respondas.',
-        ),
-        const SizedBox(height: 10),
-        LinearProgressIndicator(
-          value: questions.isEmpty ? 0 : done / questions.length,
-        ),
-        Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text('$done de ${questions.length} respondidas'),
-        ),
-        for (final (i, q) in questions.indexed)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: RadioGroup<int>(
-              groupValue: answers[q['id']],
-              onChanged: (v) {
-                if (busy) return;
-                setState(() => answers[q['id']] = v);
-                saveDraft();
-              },
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    questions.length > 1 ? '${i + 1}. ${q['text']}' : q['text'],
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  for (final o in optionsFor(q))
-                    RadioListTile<int>(
-                      contentPadding: EdgeInsets.zero,
-                      dense: true,
-                      value: o['value'],
-                      title: Text(o['label']),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        if (needsFunctioning) ...[
-          Text(
-            form!['functioning']['text'],
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          RadioGroup<int>(
-            groupValue: functioning,
-            onChanged: (v) {
-              if (busy) return;
-              setState(() => functioning = v);
-              saveDraft();
-            },
-            child: Column(
-              children: [
-                for (final o
-                    in (form!['functioning']['options'] as List)
-                        .asMap()
-                        .entries)
-                  RadioListTile<int>(
-                    contentPadding: EdgeInsets.zero,
-                    dense: true,
-                    value: o.key,
-                    title: Text(o.value),
-                  ),
-              ],
-            ),
-          ),
-        ],
-        const Text('Solo se envía cuando tocas "Enviar respuesta".'),
-        button('Enviar respuesta', complete ? submitForm : null),
-      ],
+    final extra = needsFunctioning
+        ? {
+            'id': '__functioning',
+            'text': form!['functioning']['text'],
+            'options': [
+              for (final o
+                  in (form!['functioning']['options'] as List).asMap().entries)
+                {'value': o.key, 'label': o.value},
+            ],
+          }
+        : null;
+    return QuestionFlow(
+      key: ValueKey('flow-${form!['instrument_id']}-${form!['version']}'),
+      title: formTitle,
+      instructions:
+          '${form!['recall'] ?? form!['instructions'] ?? 'Durante las últimas 2 semanas, ¿qué tan seguido te ha pasado esto?'}',
+      questions: questions,
+      extra: extra,
+      answers: {
+        ...answers,
+        if (functioning != null) '__functioning': functioning,
+      },
+      busy: busy,
+      onAnswer: (id, v) {
+        if (busy) return;
+        setState(() {
+          if (id == '__functioning') {
+            functioning = v;
+          } else {
+            answers[id] = v;
+          }
+        });
+        saveDraft();
+      },
+      onSubmit: submitForm,
     );
   }
 
@@ -1385,13 +1356,41 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 Text(
                   waitingGuardian
                       ? 'Estamos esperando la autorización de tu apoderado.'
-                      : left == 0
-                      ? 'Todo al día. Gracias por participar.'
-                      : left == 1
-                      ? 'Te falta 1 paso. Empieza por el que está marcado.'
-                      : 'Te faltan $left pasos. Empieza por el que está marcado.',
+                      : left > 0
+                      ? (left == 1
+                            ? 'Te falta 1 paso para empezar.'
+                            : 'Te faltan $left pasos para empezar.')
+                      : form != null
+                      ? 'Tienes ${isPhq ? 'un cuestionario' : 'una pregunta'} por responder.'
+                      : nextDate != null
+                      ? 'Todo al día. Lo próximo: ${shortDate(nextDate)}.'
+                      : 'Todo al día. Gracias por participar.',
                   style: const TextStyle(color: Colors.white, fontSize: 15),
                 ),
+                if (left == 0 && form != null) ...[
+                  const SizedBox(height: 14),
+                  FilledButton(
+                    key: const ValueKey('hero-answer'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: brandColor,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: busy
+                        ? null
+                        : () {
+                            setState(() => tab = 1);
+                            refresh();
+                          },
+                    child: Text(
+                      'Responder ahora · ${minutesFor((form!['questions'] as List).length)}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
                 if (home['pilot_enabled'] == false) ...[
                   const SizedBox(height: 8),
                   const Text(
@@ -1411,8 +1410,40 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   List<bool> journeyDone(dynamic auth) => [
     auth['ready'] == true,
     steps_.isNotEmpty && readySteps == steps_.length,
-    form == null,
   ];
+
+  /// Fecha más cercana en la que vuelve a tocar algo (para "Todo al día").
+  String? get nextDate {
+    final dates = [
+      for (final i in (home['plan'] ?? []) as List)
+        if (i['next_at'] != null) '${i['next_at']}',
+    ]..sort();
+    return dates.isEmpty ? home['next_questionnaire'] : dates.first;
+  }
+
+  /// "Lo que te toca": qué hay que responder ahora, qué viene después y cuándo.
+  Widget planCard() {
+    final plan = (home['plan'] ?? []) as List;
+    if (plan.isEmpty) return const SizedBox.shrink();
+    return card('Lo que te toca', [
+      PlanList(plan: plan, form: form),
+    ], leading: iconBubble(Icons.event_note, brandColor));
+  }
+
+  /// Al terminar los permisos por primera vez: qué va a responder y por qué.
+  Future<void> showPlanIntro() async {
+    final plan = (home['plan'] ?? []) as List;
+    if (plan.isEmpty || responseHistory.isNotEmpty || !mounted) return;
+    final start = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => PlanIntro(plan: plan, form: form),
+      ),
+    );
+    if (start == true && mounted) {
+      setState(() => tab = 1);
+      refresh();
+    }
+  }
 
   int journeyLeft(dynamic auth) => journeyDone(auth).where((d) => !d).length;
 
@@ -1444,23 +1475,6 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         onTap: () => openGuide(),
         color: lavender,
         icon: Icons.phone_android,
-      ),
-      (
-        title: isPhq ? 'Responde tu cuestionario' : 'Responde la pregunta',
-        text: form != null
-            ? (isPhq
-                  ? 'Tienes un cuestionario pendiente (2 min).'
-                  : 'Tienes ${(form!['title'] ?? 'una pregunta').toString().toLowerCase()} pendiente.')
-            : home['next_questionnaire'] != null
-            ? 'Nada pendiente. El próximo estará disponible el ${friendlyDate(home['next_questionnaire'], time: false)}.'
-            : 'Nada pendiente por ahora. Te avisaremos.',
-        action: form != null && done[0] ? 'Responder' : null,
-        onTap: () {
-          setState(() => tab = 1);
-          refresh();
-        },
-        color: coral,
-        icon: Icons.edit_note,
       ),
     ];
     return Card(
@@ -1793,7 +1807,10 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     onboarding()
                   else if (tab == 0) ...[
                     FadeSlide(index: 0, child: hero(auth)),
-                    FadeSlide(index: 1, child: journey(auth)),
+                    if (journeyLeft(auth) > 0)
+                      FadeSlide(index: 1, child: journey(auth))
+                    else
+                      FadeSlide(index: 1, child: planCard()),
                     FadeSlide(
                       index: 2,
                       child: card(
@@ -1833,10 +1850,15 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                                 ? 'Primero completa tu participación.'
                                 : (status['outbox_pending'] ?? 0) > 0
                                 ? 'Tu respuesta está esperando internet.'
-                                : home['next_questionnaire'] != null
-                                ? 'El próximo cuestionario aparecerá aquí desde el ${friendlyDate(home['next_questionnaire'], time: false)}. Te avisaremos.'
+                                : nextDate != null
+                                ? 'Lo próximo te toca ${shortDate(nextDate)}. Te avisaremos.'
                                 : 'Aparecerá aquí automáticamente.',
                           ),
+                          if (auth['ready'] == true &&
+                              ((home['plan'] ?? []) as List).isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            PlanList(plan: home['plan'], form: null),
+                          ],
                           button(
                             'Quiero que me contacten',
                             requestSupport,

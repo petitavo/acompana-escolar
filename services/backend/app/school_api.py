@@ -380,7 +380,9 @@ def student_home(actor=Depends(identity), db=Depends(database)):
     cfg = settings(db.get(Institution, p.institution_id))
     rows = list(db.scalars(select(Response).where(Response.participant_id == p.participant_id).order_by(Response.created_at.desc()).limit(1)))
     due = utc(rows[0].detail.get("applied_at", rows[0].created_at)) + timedelta(days=cfg["cadence_days"]) if rows else now()
-    return {"analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}, "school_zone": school_zone(cfg)}
+    from .checkins import student_plan
+    plan = student_plan(db, p, cfg, None if phq9_due(db, p, cfg) else due)
+    return {"plan": plan, "analysis_timezone": actor["device"].detail.get("timezone", "America/Lima"), "name": p.display_name, "is_test": p.is_test, "authorization": authorization_status(db, p), "policy": {k: v for k, v in p.policy.items() if k not in ("home_zone", "guardian_channel")}, "document": cfg["participation_document"], "purpose": cfg["purpose"], "coverage": coverage_now(cfg), "next_questionnaire": due.isoformat(), "questionnaire_enabled": cfg["instrument_enabled"], "has_home_zone": bool(p.policy.get("home_zone")), "capture_active": actor["device"].status == "active", "pilot_enabled": PILOT_ENABLED or p.is_test, "sampling": {"interval_minutes": cfg["location_interval_minutes"], "distance_meters": cfg["location_distance_meters"]}, "school_zone": school_zone(cfg)}
 
 
 @router.post("/me/participation")
