@@ -527,3 +527,14 @@ def test_reopen_conflicts_with_an_existing_active_case(client, users):
             )
             == 1
         )
+
+
+def test_screen_broadcast_source_is_declared_and_never_mixed(client, phone):
+    # El teléfono sin "Acceso al uso" declara la fuente en la sesión de captura.
+    from app.schemas import CaptureInput
+
+    body, e = capture_and_event(client, phone)
+    assert CaptureInput(**{**body, "id": uid(), "source": "android_screen_broadcast"})
+    e["source"] = "android_screen_broadcast"
+    rejected = client.post(A + "/events/batch", json={"events": [e]}).json()["rejected"]
+    assert rejected[0]["reason"] == "wrong_provenance"

@@ -358,7 +358,8 @@ def capture(body: CaptureInput, actor=Depends(identity), db=Depends(database)):
     if existing:
         if existing.device_id != d.id:
             raise HTTPException(409, "ID no disponible")
-        if existing.detail != body.model_dump(mode="json"):
+        stored = {"source": "android_usage_events", **existing.detail}
+        if stored != body.model_dump(mode="json"):
             raise HTTPException(409, "ID con otro contenido")
         return {"accepted": [ident], "duplicate": True}
     if body.end_at > now() + timedelta(minutes=5):
@@ -433,12 +434,12 @@ def events_batch(body: Batch, actor=Depends(identity), db=Depends(database)):
                 duplicates.append(ident)
                 continue
             reason = "id_conflict"
-        elif item.source != (
-            "synthetic_generator" if MODE == "DEMO" else "android_usage_events"
-        ):
+        elif (item.source == "synthetic_generator") != (MODE == "DEMO"):
             reason = "wrong_provenance"
         elif not c or c.device_id != d.id:
             reason = "unknown_capture_session"
+        elif item.source != c.detail.get("source", "android_usage_events") and MODE != "DEMO":
+            reason = "wrong_provenance"
         elif not (
             c.detail["success"]
             and c.detail["permission_before"]

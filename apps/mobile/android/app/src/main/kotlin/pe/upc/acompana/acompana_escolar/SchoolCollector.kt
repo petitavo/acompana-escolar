@@ -203,7 +203,7 @@ class SchoolCollector(private val context:Context) {
         for(kind in listOf("school_receipt","school_support","school_form","school_correction","school_appointment","capture","event","location","steps","summary")){
             for(p in dao.pending(kind)){
                 if(kind in listOf("capture","event","location","steps","summary") && vault.get("active")!="true")continue
-                if(kind in listOf("capture","event") && (vault.get("usage")!="true" || !transport.permission()))continue
+                if(kind in listOf("capture","event") && vault.get("usage")!="true")continue
                 try{
                     if(kind=="event"){
                         val r=JSONObject(transport.request(p.path,"POST",JSONObject().put("events",JSONArray().put(JSONObject(p.body))).toString(),p.id))

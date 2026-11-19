@@ -28,6 +28,11 @@ class SchoolApp extends StatelessWidget {
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: pageColor,
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(),
+        },
+      ),
       appBarTheme: const AppBarTheme(
         backgroundColor: pageColor,
         surfaceTintColor: Colors.transparent,
@@ -272,9 +277,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   }
 
   Widget historyCard() => card('Mis respuestas', [
-    const Text(
-      'Aquí ves los cuestionarios que el equipo ya recibió. Si te equivocaste, puedes corregirlos.',
-    ),
+    const Text('Si te equivocaste, puedes corregir una respuesta.'),
     if (responseHistory.isEmpty)
       const Padding(
         padding: EdgeInsets.only(top: 8),
@@ -491,8 +494,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       formsUnavailable = true;
       if (mounted) {
         setState(
-          () => message =
-              'No pudimos actualizar todo. Te mostramos lo último guardado; revisa tu conexión a internet.',
+          () => message = 'Sin conexión. Te mostramos lo último guardado.',
         );
       }
     } finally {
@@ -530,7 +532,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       if (mounted) {
         setState(
           () => message = (status['rejected'] ?? 0) > 0
-              ? 'Hay un envío que no pudo aceptarse. Revisa "Estado de mis envíos" en Solicitudes o pide ayuda al equipo.'
+              ? 'Un envío no se pudo registrar. Míralo en Solicitudes.'
               : (status['outbox_pending'] ?? 0) > 0
               ? 'Guardado en este teléfono. Se enviará solo cuando haya internet.'
               : method == 'schoolSupport'
@@ -566,7 +568,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     : 'Listo, guardamos tu elección.')
               : decisionState == 'rejected'
               ? 'No se pudo guardar esta decisión. Actualiza la pantalla e inténtalo otra vez.'
-              : 'Tu decisión se guardó en el teléfono y se enviará al tener internet. Si pausaste o te retiraste, la captura ya se detuvo.',
+              : 'Guardado en el teléfono. Se enviará cuando haya internet.',
         );
         if (firstConsent && decisionState == 'confirmed') tab = 0;
         if (scroll.hasClients) scrollTop();
@@ -673,7 +675,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       if (state != 'confirmed') {
         setState(
           () => message =
-              'No hay conexión con el colegio en este momento. Tu elección quedó guardada y se enviará sola; el permiso lo puedes activar al volver la conexión.',
+              'Sin conexión. Vuelve a intentarlo cuando tengas internet.',
         );
         return 'offline';
       }
@@ -683,6 +685,8 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         message = '';
       });
     }
+    // "Uso de pantalla" no tiene ventana de Android: basta con la preferencia.
+    if (kind == 'usage') return 'granted';
     setState(() {
       busy = true;
       message = '';
@@ -716,6 +720,34 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     return state;
   }
 
+  /// Activa de una vez todo lo que se comparte (un solo viaje al servidor).
+  Future<String?> enableAll() async {
+    setState(() {
+      usage = true;
+      location = true;
+      steps = status['steps_supported'] != false;
+      reminders = true;
+      preferencesDirty = true;
+    });
+    final saved = await decision('preferences');
+    final state = saved?['decision_state'];
+    if (state == 'confirmed' && mounted) {
+      setState(() {
+        home['policy'] = {
+          ...Map.from(home['policy'] ?? {}),
+          'usage': true,
+          'location': true,
+          'steps': steps,
+          'reminders': true,
+        };
+        message = '';
+      });
+    }
+    return saved == null
+        ? null
+        : (state == 'confirmed' || state == 'rejected' ? state : 'offline');
+  }
+
   Future<void> openGuide({String? initialKind}) async {
     if (guideOpen || home['authorization']?['ready'] != true) return;
     guideOpen = true;
@@ -728,6 +760,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             loadDevice: refreshDevice,
             policy: () => home['policy'] ?? {},
             request: permission,
+            enableAll: enableAll,
             confirm: (key) async {
               try {
                 await call('schoolSetupConfirm', {'key': key, 'value': true});
@@ -784,7 +817,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     if (supportOpen) {
       setState(
         () => message =
-            'Ya tienes una solicitud abierta. El equipo te contactará; puedes ver su estado en Solicitudes.',
+            'Ya pediste que te contacten. Puedes ver el estado en Solicitudes.',
       );
       return;
     }
@@ -793,7 +826,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       builder: (c) => AlertDialog(
         title: const Text('¿Quieres que el equipo te contacte?'),
         content: const Text(
-          'El equipo de psicología de tu colegio recibirá tu pedido y te buscará en su horario de atención. No necesitas explicar el motivo.',
+          'El equipo de psicología te buscará en su horario. No necesitas explicar el motivo.',
         ),
         actions: [
           TextButton(
@@ -1015,7 +1048,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     final canEdit = status['policy_pending'] != true;
     final list = steps_;
     return card('Permisos de este teléfono', [
-      Text('Todos son opcionales. $readySteps de ${list.length} activos.'),
+      Text('$readySteps de ${list.length} activos. Todos son opcionales.'),
       if (!canEdit)
         const Padding(
           padding: EdgeInsets.only(top: 6),
@@ -1070,7 +1103,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
           },
         ),
       button(
-        'Abrir guía paso a paso',
+        'Activar permisos',
         canEdit ? () => openGuide() : null,
         secondary: true,
       ),
@@ -1113,20 +1146,36 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
   Widget coverage() {
     final c = home['coverage'] ?? {};
     return card(
-      'Tu equipo y recursos de apoyo',
+      'Ayuda',
       [
-        Text(c['text'] ?? 'Consulta a tu colegio sus horarios de atención.'),
-        const SizedBox(height: 8),
-        Text(
-          c['open'] == true
-              ? 'Ahora el equipo está en horario de atención.'
-              : 'Ahora el equipo está fuera de su horario de atención.',
-          style: const TextStyle(fontWeight: FontWeight.w600),
+        Row(
+          children: [
+            Icon(
+              Icons.circle,
+              size: 10,
+              color: c['open'] == true ? leaf : const Color(0xff94a3b8),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                c['open'] == true
+                    ? 'El equipo está atendiendo ahora.'
+                    : 'El equipo está fuera de horario.',
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
         ),
-        const Text(
-          'La app no reemplaza una atención de emergencia ni atiende las 24 horas.',
-        ),
+        if ((c['text'] ?? '').toString().isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Text(c['text'], style: const TextStyle(color: Color(0xff64748b))),
+        ],
         for (final r in c['resources'] ?? []) resourceLine(r),
+        const SizedBox(height: 8),
+        const Text(
+          'Esta app no es un servicio de emergencia.',
+          style: TextStyle(color: Color(0xff64748b), fontSize: 13),
+        ),
       ],
       leading: iconBubble(Icons.support_agent, lavender),
       tint: lavender,
@@ -1277,9 +1326,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             ),
           ),
         ],
-        const Text(
-          'Tus respuestas se guardan cifradas en este teléfono mientras respondes. Solo se envían cuando tocas "Enviar respuesta".',
-        ),
+        const Text('Solo se envía cuando tocas "Enviar respuesta".'),
         button('Enviar respuesta', complete ? submitForm : null),
       ],
     );
@@ -1379,10 +1426,10 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       (
         title: 'Acepta participar',
         text: done[0]
-            ? 'Listo. Puedes cambiar lo que compartes en Participación.'
+            ? 'Listo.'
             : waitingGuardian
-            ? 'Primero tu madre, padre o apoderado debe autorizar. Cuando lo haga, podrás seguir aquí.'
-            : 'Lee qué se recoge y decide qué quieres compartir. Toma 2 minutos.',
+            ? 'Primero debe autorizar tu apoderado.'
+            : 'Lee qué se recoge y acepta si quieres.',
         action: done[0] || waitingGuardian ? null : 'Leer y decidir',
         onTap: () => setState(() => tab = 3),
         color: brandColor,
@@ -1391,13 +1438,9 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       (
         title: 'Prepara tu teléfono',
         text: done[1]
-            ? 'Todos los permisos que elegiste están activos.'
-            : '$readySteps de ${list.length} permisos activos. Te explicamos cada uno antes de pedirlo.',
-        action: done[1] || !done[0]
-            ? null
-            : readySteps == 0
-            ? 'Empezar (3 min)'
-            : 'Continuar',
+            ? 'Todo activo.'
+            : '$readySteps de ${list.length} activos. Un botón y listo.',
+        action: done[1] || !done[0] ? null : 'Activar permisos',
         onTap: () => openGuide(),
         color: lavender,
         icon: Icons.phone_android,
@@ -1735,9 +1778,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 children: [
                   if (status['reauth_required'] == true)
                     card('Tu acceso necesita renovarse', [
-                      const Text(
-                        'Pide una nueva invitación al colegio. Para usarla se borrarán los borradores y envíos que queden en este teléfono.',
-                      ),
+                      const Text('Pide un código nuevo al colegio.'),
                       button(
                         'Borrar datos locales y usar nueva invitación',
                         () => action('schoolForget'),
@@ -1751,31 +1792,33 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                   if (!enrolled)
                     onboarding()
                   else if (tab == 0) ...[
-                    hero(auth),
-                    journey(auth),
-                    card(
-                      '¿Quieres hablar con alguien?',
-                      [
-                        const Text(
-                          'Pide que el equipo de psicología de tu colegio te contacte. No necesitas explicar el motivo.',
-                        ),
-                        button(
-                          'Quiero que me contacten',
-                          requestSupport,
-                          secondary: true,
-                        ),
-                      ],
-                      leading: iconBubble(Icons.chat_outlined, coral),
-                      tint: coral,
-                    ),
-                    coverage(),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(
-                        'Envíos pendientes: ${status['outbox_pending'] ?? 0} · Última sincronización: ${friendlyDate(status['last_sync'])}',
-                        style: Theme.of(context).textTheme.bodySmall,
+                    FadeSlide(index: 0, child: hero(auth)),
+                    FadeSlide(index: 1, child: journey(auth)),
+                    FadeSlide(
+                      index: 2,
+                      child: card(
+                        '¿Quieres hablar con alguien?',
+                        [
+                          const Text('El equipo de psicología te contactará.'),
+                          button(
+                            'Quiero que me contacten',
+                            requestSupport,
+                            secondary: true,
+                          ),
+                        ],
+                        leading: iconBubble(Icons.chat_outlined, coral),
+                        tint: coral,
                       ),
                     ),
+                    FadeSlide(index: 3, child: coverage()),
+                    if ((status['outbox_pending'] ?? 0) > 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Text(
+                          '${status['outbox_pending']} envíos esperando internet.',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
                   ] else if (tab == 1) ...[
                     if (form == null)
                       card(
@@ -1789,7 +1832,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                             auth['ready'] != true
                                 ? 'Primero completa tu participación.'
                                 : (status['outbox_pending'] ?? 0) > 0
-                                ? 'Tu respuesta puede estar esperando internet. Toca sincronizar (arriba a la derecha) para enviarla.'
+                                ? 'Tu respuesta está esperando internet.'
                                 : home['next_questionnaire'] != null
                                 ? 'El próximo cuestionario aparecerá aquí desde el ${friendlyDate(home['next_questionnaire'], time: false)}. Te avisaremos.'
                                 : 'Aparecerá aquí automáticamente.',
@@ -1855,9 +1898,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                     ]),
                     if (deliveryLog.isNotEmpty)
                       card('Estado de mis envíos', [
-                        const Text(
-                          'Lo que envías se guarda cifrado en el teléfono hasta que el equipo lo recibe. Nada se marca como recibido si no llegó.',
-                        ),
+                        const Text('Lo que aún no llega al equipo.'),
                         for (final item in deliveryLog)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
@@ -1927,9 +1968,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         if (auth['minor'] == true && auth['guardian'] != true)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
-            child: Text(
-              'Falta la autorización de tu madre, padre o apoderado. Se actualizará sola cuando la envíen.',
-            ),
+            child: Text('Falta la autorización de tu apoderado.'),
           ),
         if (auth['student'] != true && auth['guardian'] == true)
           CheckboxListTile(
@@ -1941,9 +1980,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
             ),
           ),
         if (auth['ready'] == true) ...[
-          const Text(
-            'Elige qué compartir. Puedes cambiarlo cuando quieras; para activar un permiso usa la guía de permisos.',
-          ),
+          const Text('Elige qué compartir. Puedes cambiarlo cuando quieras.'),
           toggle(
             'Uso de pantalla',
             usage,
@@ -2011,7 +2048,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
                 const Padding(
                   padding: EdgeInsets.only(top: 8),
                   child: Text(
-                    '¿Estás en tu casa ahora? Puedes marcarla para calcular el tiempo que pasas en casa. Se guarda solo en tu teléfono.',
+                    'Si estás en casa, puedes marcarla. Se guarda solo en tu teléfono.',
                   ),
                 ),
                 button(
@@ -2056,9 +2093,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
       ]),
       if (auth['student'] == true)
         card('Retirar mi participación', [
-          const Text(
-            'Se detiene la captura y se pide borrar tus datos. Si no hay internet, la captura se detiene igual y el retiro se envía después.',
-          ),
+          const Text('Se detiene todo y se borran tus datos.'),
           button('Retirarme', () async {
             final yes = await showDialog<bool>(
               context: context,

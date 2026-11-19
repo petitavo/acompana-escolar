@@ -60,6 +60,10 @@ class CaptureInput(Strict):
     outbox_pending: int = Field(default=0, ge=0)
     monotonic_ms: int | None = Field(default=None, ge=0)
     keyguard_available: bool = True
+    # Sin "Acceso al uso", el teléfono escucha los avisos de encendido/apagado de pantalla.
+    source: Literal["android_usage_events", "android_screen_broadcast"] = (
+        "android_usage_events"
+    )
 
     @model_validator(mode="after")
     def bounds(self):
@@ -94,7 +98,9 @@ class EventInput(Strict):
         "DEVICE_SHUTDOWN",
         "DEVICE_STARTUP",
     ]
-    source: Literal["android_usage_events", "synthetic_generator"]
+    source: Literal[
+        "android_usage_events", "android_screen_broadcast", "synthetic_generator"
+    ]
     payload: EventPayload = Field(default_factory=EventPayload)
     capture_session_id: UUID
     consent_version: str = Field(default="lab-v1", max_length=40)

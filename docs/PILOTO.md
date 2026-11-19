@@ -1,4 +1,4 @@
-# Cómo funciona Acompaña Escolar (versión 0.4.3, piloto)
+# Cómo funciona Acompaña Escolar (versión 0.4.4, piloto)
 
 Este documento resume qué hace la aplicación, cómo funciona cada parte y qué hay que hacer para el piloto con unos 30 estudiantes.
 
@@ -20,16 +20,15 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 
 1. **Código de acceso.** El colegio crea al estudiante en el panel y le entrega un código de 8 caracteres (por ejemplo `ABCD-2345`). El estudiante instala la app y escribe solo ese código: el servidor ya va fijo dentro del APK. El código sirve una sola vez, vence en 7 días y el servidor limita los intentos fallidos.
 2. **Autorización.** Si es menor de edad, el apoderado autoriza primero desde su propio enlace. Luego el estudiante lee el documento de participación y marca qué quiere compartir: uso de pantalla, ubicación, pasos y recordatorios. Todo es opcional.
-3. **Guía de permisos (nueva).** Al aceptar, el alumno vuelve a Inicio y el paso 2, "Prepara tu teléfono", queda marcado. La guía no se abre sola: se abre cuando el alumno toca el botón. Cada paso explica antes de tocar nada qué ventana de Android va a aparecer y qué elegir, y además:
-   - para qué sirve el permiso,
-   - lo que **no** vemos (mensajes, fotos, apps usadas, lo que escribe),
-   - cómo activarlo en su marca de teléfono (Xiaomi, Samsung, Huawei, Honor, OPPO, realme, OnePlus, vivo o Motorola).
+3. **Permisos en un botón.** Al aceptar, el alumno vuelve a Inicio y el paso 2 queda marcado. "Activar permisos" abre una sola pantalla con la lista (uso de pantalla, avisos, ubicación, pasos, batería y, al final, ubicación siempre e inicio automático en las marcas que lo necesitan) y un botón que:
+   - guarda de una vez lo que se comparte (un solo viaje al servidor, así las ventanas de Android salen al instante);
+   - pide seguidas las ventanas de Android;
+   - antes de lo que se hace en Ajustes (ubicación siempre, inicio automático) dice en una línea qué tocar, y al volver sigue solo.
 
-   Los pasos son: avisos, uso de pantalla, ubicación, ubicación en segundo plano, pasos, batería sin restricciones e inicio automático (este último solo en las marcas que lo necesitan).
+   Lo que el alumno rechaza no se vuelve a pedir solo. Si Android ya no muestra la ventana, la fila dice "Bloqueado" y al tocarla abre Ajustes. Siempre hay "Ahora no".
 
-   Si Android ya no muestra la ventana del permiso (el estudiante tocó "No volver a preguntar"), la guía lo detecta y ofrece "Abrir ajustes". Si solo dio ubicación aproximada, la guía pide la precisa, porque la asistencia la necesita.
+   **Ya no se pide "Acceso al uso".** Android 13+ lo bloquea en apps instaladas fuera de Play Store ("configuración restringida") y en algunos Samsung ni siquiera aparece la opción para desbloquearlo. Ahora el uso de pantalla se mide con los avisos de encendido/apagado de la pantalla que escucha el servicio de la app (fuente `android_screen_broadcast`). Si el teléfono tuviera "Acceso al uso" concedido, se sigue usando el historial de Android (`android_usage_events`).
 
-   Siempre hay "Ahora no". La guía se puede volver a abrir desde Inicio o desde Participación, y al regresar de Ajustes revisa sola qué quedó activo.
 4. **Inicio.** Una cabecera de color con el nombre del alumno y "Tu camino": tres pasos numerados (aceptar participar, preparar el teléfono, responder el cuestionario). El paso que toca ahora se marca con "Ahora" y tiene su botón. Debajo están "Quiero que me contacten" y el horario del equipo. Los avisos (verde = listo, ámbar = falta algo o no hay conexión, rojo = no se pudo) quedan fijos arriba y se cierran con una X.
 5. **Cuestionarios.** El PHQ-9 aparece cada 14 días o más (según configure el colegio). Si el equipo los activa, también aparecen:
    - el PHQ-2 (preguntas 1 y 2 del PHQ-9), solo en la semana intermedia entre dos PHQ-9, para no repetir preguntas recién respondidas,
@@ -42,7 +41,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 
 ## Qué se calcula en el teléfono y qué no
 
-- **Pantalla:** cuántas veces y cuánto tiempo se enciende, y el uso nocturno. No se sabe qué apps se usan.
+- **Pantalla:** cuántas veces y cuánto tiempo se enciende, y el uso nocturno. No se sabe qué apps se usan. Se mide solo mientras el servicio de la app está activo (necesita que el alumno comparta ubicación o pasos); el tiempo en que Android cerró la app queda como no cubierto, no como cero.
 - **Descanso (nuevo, `sleep-proxy-v1.0`):** el periodo más largo sin usar el teléfono entre las 20:00 y las 12:00. Los usos de menos de 2 minutos, como mirar la hora, no lo cortan. Si no hubo uso antes o después, o el permiso no estuvo activo, el dato queda como parcial y no entra al análisis. **No mide sueño real**; es una aproximación conocida en la literatura (StudentLife).
 - **Movilidad:** distancia, radio de movimiento, tiempo en la zona habitual y diversidad de lugares. Se calcula en el teléfono; al servidor solo llegan resúmenes diarios.
 - **Asistencia (nuevo, `mobility-v1.1`):** minutos dentro del círculo del colegio en horario de clases. El colegio define el centro, el radio, el horario y los días en el panel. Solo se envían los minutos, nunca las coordenadas. Si se observó menos de la mitad del horario, el dato no es elegible.

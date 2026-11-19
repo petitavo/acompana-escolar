@@ -442,25 +442,26 @@ void main() {
     // y nada se abre solo.
     expect(find.text('Tu camino'), findsOneWidget);
     expect(find.textContaining('Sigue con el paso 2'), findsOneWidget);
-    expect(find.text('Vamos a preparar tu teléfono'), findsNothing);
+    expect(find.text('Activa los permisos'), findsNothing);
     expect(calls, isNot(contains('schoolPermission')));
-    // Desde Inicio se abre la guía y se puede pedir un permiso.
-    await t.tap(find.text('Empezar (3 min)'));
+    // Desde Inicio, un botón abre la pantalla de permisos y otro los pide todos.
+    await t.tap(find.text('Activar permisos'));
     await t.pumpAndSettle();
-    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
-    await t.tap(find.text('Empezar'));
+    expect(find.text('Activa los permisos'), findsOneWidget);
+    expect(calls, isNot(contains('schoolPermission')));
+    await t.tap(find.byKey(const ValueKey('guide-main')));
     await t.pumpAndSettle();
-    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
-    await t.pumpAndSettle();
-    expect(calls.where((x) => x == 'schoolPermission').length, 1);
-    calls.removeWhere((x) => x == 'schoolPermission');
+    // Una sola vez al servidor (aceptar + guardar todo) y luego las ventanas seguidas.
+    expect(calls.where((x) => x == 'schoolParticipation').length, 2);
+    expect(calls.where((x) => x == 'schoolPermission').length, greaterThan(1));
+    expect(locationGranted, isTrue);
+    expect(stepsGranted, isTrue);
+    // Se detiene antes de "Ubicación siempre", que abre Ajustes, y dice qué tocar.
+    expect(find.textContaining('Permitir todo el tiempo'), findsOneWidget);
     await t.pageBack();
     await t.pumpAndSettle();
     expect(find.text('Tu camino'), findsOneWidget);
     expect(find.text('Aceptar y continuar'), findsNothing);
-    expect(calls.where((x) => x == 'schoolParticipation').length, 1);
-    expect(calls, isNot(contains('schoolStartSensors')));
-    expect(calls, isNot(contains('schoolPermission')));
   });
   testWidgets(
     'one tap saves selection, requests Android and starts granted sensors',
@@ -583,21 +584,24 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Participación'));
     await t.pumpAndSettle();
-    await t.tap(find.text('Abrir guía paso a paso'));
+    await t.ensureVisible(find.text('Activar permisos'));
     await t.pumpAndSettle();
-    expect(find.text('Vamos a preparar tu teléfono'), findsOneWidget);
-    await t.tap(find.text('Empezar'));
+    await t.tap(find.text('Activar permisos'));
     await t.pumpAndSettle();
-    expect(find.text('Paso 1 de 5'), findsOneWidget);
-    expect(find.textContaining('Lo que NO vemos'), findsWidgets);
+    expect(find.text('Activa los permisos'), findsOneWidget);
+    expect(find.text('Uso de pantalla'), findsOneWidget);
     await expectLater(
       find.byType(SchoolApp),
       matchesGoldenFile('goldens/product-guide.png'),
     );
-    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
+    await t.tap(find.byKey(const ValueKey('guide-main')));
     await t.pumpAndSettle();
     expect(calls, contains('schoolPermission'));
-    expect(find.widgetWithText(FilledButton, 'Abrir ajustes'), findsOneWidget);
+    // Lo que Android ya no deja pedir queda marcado y se abre Ajustes al tocarlo.
+    expect(find.textContaining('Bloqueado'), findsWidgets);
+    await t.tap(find.byKey(const ValueKey('guide-row-location')));
+    await t.pumpAndSettle();
+    expect(calls, contains('schoolOpenSettings'));
     expect(calls, isNot(contains('schoolStartSensors')));
   });
 
@@ -665,14 +669,18 @@ void main() {
     await t.pumpAndSettle();
     await t.tap(find.text('Ubicación'));
     await t.pumpAndSettle();
-    expect(find.text('Prepara tu teléfono'), findsOneWidget);
-    await t.tap(find.widgetWithText(FilledButton, 'Permitir'));
-    await t.pumpAndSettle();
-    // Guarda la preferencia y pide el permiso en el mismo toque, con la guía encima.
+    // Un toque: guarda la preferencia y pide solo ese permiso.
+    expect(find.text('Activa los permisos'), findsOneWidget);
     expect(calls.where((x) => x == 'schoolParticipation').length, 1);
     expect(calls.where((x) => x == 'schoolPermission').length, 1);
     expect(locationGranted, isTrue);
-    expect(find.text('¡Listo! Este paso ya está activo.'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('guide-row-location')),
+        matching: find.text('Activo'),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a single access code links the phone', (t) async {
