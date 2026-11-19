@@ -90,9 +90,8 @@ class LocationService:Service(),SensorEventListener {
         if(!location&&!steps){lastError="Concede ubicación o actividad física para iniciar los sensores elegidos.";stopSelf();return START_NOT_STICKY}
         val nm=getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(NotificationChannel("collection","Participación y sensores",NotificationManager.IMPORTANCE_LOW))
-        val stop=PendingIntent.getService(this,2,Intent(this,LocationService::class.java).setAction("pause"),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val open=PendingIntent.getActivity(this,0,Intent(this,MainActivity::class.java),PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        val notification=NotificationCompat.Builder(this,"collection").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Acompaña Escolar").setContentText(if(location&&steps)"Ubicación y pasos activos · puedes pausar" else if(location)"Ubicación activa · puedes pausar" else "Pasos activos · puedes pausar").setOngoing(true).setContentIntent(open).addAction(0,"Pausar",stop).build()
+        val notification=NotificationCompat.Builder(this,"collection").setSmallIcon(android.R.drawable.ic_menu_mylocation).setContentTitle("Acompaña Escolar").setContentText(if(location&&steps)"Ubicación y pasos activos" else if(location)"Ubicación activa" else "Pasos activos").setOngoing(true).setContentIntent(open).build()
         var type=if(location)ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION else 0
         if(steps&&Build.VERSION.SDK_INT>=34)type=type or ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH
         try{

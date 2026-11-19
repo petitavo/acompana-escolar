@@ -443,6 +443,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         if (!mounted) return;
         applyHome(h); // Authorization must not depend on forms/history loading.
         await refreshStatus();
+        await keepParticipating();
         await refreshDevice();
         final f = await call('schoolForms') as List;
         if (!mounted) return;
@@ -893,22 +894,53 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
     }
   }
 
+  String participationBody(String act) => jsonEncode({
+    'action': act,
+    'document_version': home['authorization']['version'],
+    'occurred_at': DateTime.now().toUtc().toIso8601String(),
+    'usage': usage,
+    'location': location,
+    'steps': steps,
+    'raw_location_upload': raw && location,
+    'research_access': research,
+    'reminders': reminders,
+    'reminder_time':
+        '${reminder.hour.toString().padLeft(2, '0')}:${reminder.minute.toString().padLeft(2, '0')}',
+  });
+
   Future<Map<String, dynamic>?> decision(String act) {
-    return action('schoolParticipation', {
-      'body': jsonEncode({
-        'action': act,
-        'document_version': home['authorization']['version'],
-        'occurred_at': DateTime.now().toUtc().toIso8601String(),
-        'usage': usage,
-        'location': location,
-        'steps': steps,
-        'raw_location_upload': raw && location,
-        'research_access': research,
-        'reminders': reminders,
-        'reminder_time':
-            '${reminder.hour.toString().padLeft(2, '0')}:${reminder.minute.toString().padLeft(2, '0')}',
-      }),
-    });
+    return action('schoolParticipation', {'body': participationBody(act)});
+  }
+
+  bool resumeTried = false;
+
+  /// La app no ofrece pausar. Si el alumno ya aceptó pero este teléfono quedó
+  /// detenido (una versión anterior lo pausó, o el piloto se abrió después), se
+  /// reactiva en silencio, una vez por apertura. Para dejar de participar está
+  /// "Retirarme".
+  Future<void> keepParticipating() async {
+    if (resumeTried ||
+        busy ||
+        preferencesDirty ||
+        home['authorization']?['ready'] != true ||
+        home['capture_active'] == true ||
+        home['pilot_enabled'] != true ||
+        status['policy_pending'] == true) {
+      return;
+    }
+    resumeTried = true;
+    try {
+      final v = await call('schoolParticipation', {
+        'body': participationBody('resume'),
+      });
+      if (v is Map && mounted) {
+        setState(() => status = Map<String, dynamic>.from(v));
+      }
+      await refreshHome();
+    } catch (_) {
+      // Sin internet: se vuelve a intentar la próxima vez que se abra la app.
+      resumeTried = false;
+    }
   }
 
   Widget iconBubble(IconData icon, Color color) => CircleAvatar(
@@ -1112,34 +1144,7 @@ class _SchoolHomeState extends State<SchoolHome> with WidgetsBindingObserver {
         canEdit ? () => openGuide() : null,
         secondary: true,
       ),
-      const Divider(height: 32),
-      Row(
-        children: [
-          Icon(
-            home['capture_active'] != true
-                ? Icons.pause_circle_outline
-                : status['sensor_running'] == true
-                ? Icons.sensors
-                : Icons.hourglass_empty,
-            color: brandColor,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              home['capture_active'] != true
-                  ? 'Participación pausada'
-                  : status['sensor_running'] == true
-                  ? 'Sensores activos'
-                  : 'Los sensores se iniciarán al conceder ubicación o pasos.',
-            ),
-          ),
-        ],
-      ),
-      button(
-        home['capture_active'] == true ? 'Pausar' : 'Reanudar',
-        () => decision(home['capture_active'] == true ? 'pause' : 'resume'),
-        secondary: true,
-      ),
+      // Sin "pausar": quien ya no quiere participar usa "Retirarme".
       if ((status['sensor_error'] ?? '').toString().isNotEmpty) ...[
         const SizedBox(height: 10),
         Text(status['sensor_error']),

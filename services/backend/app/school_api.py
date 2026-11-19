@@ -342,8 +342,29 @@ def enroll_student(body: VerifyEnrollment, request: Request, db=Depends(database
     db.add(Session(device_id=device.id, token_hash=digest(token), csrf="", expires_at=now() + timedelta(days=30)))
     version = settings(db.get(Institution, p.institution_id))["document_version"]
     db.add(Authorization(participant_id=p.participant_id, kind="verification", version=version, actor_id=device.id, detail={"accepted": True, "method": method}))
+    if authorization_status(db, p)["ready"]:
+        # Código renovado (teléfono nuevo o app reinstalada): el alumno ya había aceptado,
+        # así que sigue participando sin volver a decidir nada.
+        set_capture(db, p, device, {**p.policy, "paused": False}, now())
     audit(db, device.id, "school.enrolled", p.participant_id)
     return {"token": token, "device_id": device.id, "mode": MODE, "pseudonym": db.get(Participant, p.participant_id).pseudonym, "name": p.display_name}
+
+
+def set_capture(db, p, d, policy, at):
+    """Activa o detiene la captura de un teléfono según la política del alumno."""
+    if not policy.get("paused") and (p.is_test or PILOT_ENABLED):
+        for kind in ("usage", "location", "steps"):
+            # Un período nuevo de captura empieza ahora, no antes.
+            if policy.get(kind) and (not p.policy.get(kind) or d.status != "active"):
+                policy[kind + "_since"] = max(at, now()).isoformat()
+        d.status = "active"
+        if not db.scalar(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
+            db.add(Interval(device_id=d.id, start_at=now()))
+    else:
+        d.status = "paused"
+        for interval in db.scalars(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
+            interval.end_at = at
+    p.policy = policy
 
 
 def withdraw(db, p, actor_id):
@@ -416,19 +437,10 @@ def student_participation(body: ParticipationInput, actor=Depends(identity), db=
         policy = {**old, **{k: getattr(body, k) for k in ("usage", "location", "steps", "raw_location_upload", "research_access", "reminder_time", "reminders")}}
         if policy["raw_location_upload"] and not policy["location"]:
             raise HTTPException(422, "Compartir coordenadas requiere compartir ubicación")
-        for kind in ("usage", "location", "steps"):
-            if policy[kind] and (not old.get(kind) or d.status != "active"):
-                policy[kind + "_since"] = max(body.occurred_at, now()).isoformat()
-        policy["paused"] = body.action == "pause" or body.action == "preferences" and (d.status != "active" or old.get("paused", False))
-        p.policy = policy
-        if policy["paused"] or not p.is_test and not PILOT_ENABLED:
-            d.status = "paused"
-            for interval in db.scalars(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
-                interval.end_at = body.occurred_at
-        else:
-            d.status = "active"
-            if not db.scalar(select(Interval).where(Interval.device_id == d.id, Interval.end_at == None)):
-                db.add(Interval(device_id=d.id, start_at=now()))
+        # Un teléfono recién vinculado (status "pending") no cuenta como pausa: guardar
+        # preferencias lo activa. Solo una pausa pedida antes se mantiene.
+        policy["paused"] = body.action == "pause" or body.action == "preferences" and old.get("paused", False)
+        set_capture(db, p, d, policy, body.occurred_at)
         db.add(Authorization(participant_id=p.participant_id, kind="preferences", version=body.document_version, actor_id=d.id, detail={"usage": body.usage, "location": body.location, "steps": body.steps, "raw_location_upload": body.raw_location_upload, "research_access": body.research_access, "action": body.action}))
         audit(db, d.id, "school.participation", p.participant_id)
         return {"saved": True, "capture_active": d.status == "active", "policy": {k: v for k, v in policy.items() if k not in ("home_zone", "guardian_channel")}}

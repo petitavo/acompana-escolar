@@ -37,7 +37,7 @@ Acompaña Escolar es un sistema de software para que el equipo de psicología de
 
    Mientras el PHQ-9 esté pendiente se muestra solo, para no encadenar cuestionarios. Si el estudiante marca algo distinto de "Ningún día" en la pregunta 9, la app le muestra en ese momento a quién llamar, con un botón "Llamar" que abre el marcador.
 6. **Sin internet.** Todo se guarda cifrado en el teléfono y se envía después. La pestaña Solicitudes muestra el estado de cada envío.
-7. **Pausar o retirarse.** En Participación se puede pausar la captura, cambiar lo que se comparte o retirarse; al retirarse se borran sus datos.
+7. **Retirarse.** No hay botón de pausa: quien acepta sigue participando, y si cambia de celular o reinstala la app, el código renovado lo deja activo sin pasos extra. En Participación puede cambiar lo que comparte o retirarse; al retirarse se borran sus datos.
 
 ## Qué se calcula en el teléfono y qué no
 

@@ -98,7 +98,8 @@ void main() {
       'steps': false,
       'reminders': true,
     });
-    home['capture_active'] = false;
+    // Ya aceptó: lo normal es que este teléfono esté participando.
+    home['capture_active'] = true;
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('pe.upc.acompana/collector'),
@@ -442,6 +443,7 @@ void main() {
       home['capture_active'] = false;
     });
     auth.addAll({'student': false, 'ready': false});
+    home['capture_active'] = false;
     await t.binding.setSurfaceSize(const Size(390, 844));
     addTearDown(() => t.binding.setSurfaceSize(null));
     await t.pumpWidget(const SchoolApp());
@@ -536,19 +538,23 @@ void main() {
     expect(calls.where((v) => v == 'schoolForms').length, greaterThan(before));
     expect(find.text('Cómo te has sentido'), findsOneWidget);
   });
-  testWidgets('granting a permission does not resume a paused participation', (
+  testWidgets('a stopped phone resumes by itself and offers no pause', (
     t,
   ) async {
+    // Código renovado o versión anterior que pausó: ya aceptó, así que sigue
+    // participando sin que el alumno tenga que tocar "Reanudar".
     enrolled = true;
+    home['capture_active'] = false;
     await t.pumpWidget(const SchoolApp());
     await t.pumpAndSettle();
+    expect(calls.where((c) => c == 'schoolParticipation').length, 1);
+    expect(home['capture_active'], isTrue);
     await t.tap(find.text('Participación'));
     await t.pumpAndSettle();
-    await t.tap(find.byKey(const ValueKey('permission-location')));
-    await t.pumpAndSettle();
-    expect(calls, contains('schoolPermission'));
-    expect(calls, isNot(contains('schoolStartSensors')));
-    expect(find.text('Participación pausada'), findsOneWidget);
+    expect(find.text('Participación pausada'), findsNothing);
+    expect(find.text('Pausar'), findsNothing);
+    expect(find.text('Reanudar'), findsNothing);
+    expect(calls.where((c) => c == 'schoolParticipation').length, 1);
   });
   testWidgets(
     'new step permission refreshes an already running location service',
