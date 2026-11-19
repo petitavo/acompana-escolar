@@ -10,6 +10,11 @@ import java.util.concurrent.Executors
 
 class MainActivity:FlutterActivity(){
     private val executor=Executors.newSingleThreadExecutor()
+    // Lo local (estado, borradores) y las decisiones no hacen fila detrás de las
+    // consultas a internet, que pueden tardar hasta 30 s cada una.
+    private val local=Executors.newSingleThreadExecutor()
+    private val decisions=Executors.newSingleThreadExecutor()
+    private val localMethods=setOf("schoolStatus","schoolDraft","schoolDeliveryLog","schoolDismiss","schoolHomeZone","status","draft")
     private var permissionReply:MethodChannel.Result?=null
     private var permissionKind=""
     private fun permissionGranted(kind:String):Boolean=when(kind){
@@ -125,7 +130,7 @@ class MainActivity:FlutterActivity(){
                 result.success(DeviceSetup.info(this).toString())
             }else if(call.method=="openUsageSettings"){
                 startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS,Uri.parse("package:$packageName")));result.success(null)
-            }else executor.execute{
+            }else (if(call.method in localMethods)local else if(call.method=="schoolParticipation")decisions else executor).execute{
                 try{
                     val collector=Collector(applicationContext)
                     val response=when(call.method){
@@ -160,7 +165,7 @@ class MainActivity:FlutterActivity(){
                         else->throw IllegalArgumentException("Método no soportado")
                     }
                     runOnUiThread{result.success(response)}
-                }catch(e:Exception){if(BuildConfig.DEBUG)android.util.Log.e("SchoolBridge",call.method+": "+e.javaClass.simpleName);runOnUiThread{result.error("LAB_OPERATION",if(e is ApiFailure)"Servidor HTTP ${e.status}; datos pendientes conservados" else e.message?:"No se pudo completar la operación",null)}}
+                }catch(e:Exception){if(BuildConfig.DEBUG)android.util.Log.e("SchoolBridge",call.method+": "+e.javaClass.simpleName);runOnUiThread{result.error("LAB_OPERATION",if(e is ApiFailure)(e.detail.ifEmpty{if(e.status==401)"Tu acceso no es válido. Pide un código nuevo al colegio." else "No se pudo conectar con el colegio (error ${e.status}). Inténtalo otra vez."}) else e.message?:"No se pudo completar la operación",null)}}
             }
         }
     }

@@ -22,7 +22,8 @@ import okhttp3.Request
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class ApiFailure(val status:Int):Exception("Servidor HTTP $status")
+/** Error del servidor. [detail] es el mensaje en español que envía la API, si lo hay. */
+class ApiFailure(val status:Int,val detail:String=""):Exception("Servidor HTTP $status")
 class Collector(private val context:Context){
     private val vault=Vault(context)
     private val database=LabDatabase.get(context)
@@ -48,7 +49,8 @@ class Collector(private val context:Context){
                         WorkManager.getInstance(context).cancelUniqueWork("school-sync")
                     }
                 }
-                throw ApiFailure(response.code)
+                val detail=try{JSONObject(response.body?.string()?:"{}").opt("detail").let{if(it is String)it else ""}}catch(_:Exception){""}
+                throw ApiFailure(response.code,detail)
             }
             response.body?.string()?:"{}"
         }
